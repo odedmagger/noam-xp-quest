@@ -1,0 +1,137 @@
+{
+  "activeSemesterId": "2026-a",
+  "semesters": [
+    {
+      "id": "2026-a",
+      "name": "סמסטר א׳ · תשפ״ז",
+      "startDate": "2026-09-01",
+      "endDate": "2027-01-31",
+      "achievements": [
+        {
+          "id": "studied",
+          "title": "למדתי טוב למבחן",
+          "xp": 10
+        },
+        {
+          "id": "mastery",
+          "title": "השגתי ציון ״שולט היטב״ ומעלה",
+          "xp": 10
+        },
+        {
+          "id": "excellent",
+          "title": "השגתי ציון ״מצטיין״",
+          "xp": 5,
+          "requires": "mastery"
+        }
+      ],
+      "exams": [
+        {
+          "id": "math",
+          "subject": "מתמטיקה",
+          "title": "חיבור וחיסור עד 10,000",
+          "date": "2026-11-19",
+          "icon": "math"
+        },
+        {
+          "id": "english",
+          "subject": "אנגלית",
+          "title": "אוצר מילים והבנת הנקרא",
+          "date": "2026-11-25",
+          "icon": "language"
+        },
+        {
+          "id": "science",
+          "subject": "מדעים",
+          "title": "חומרים ותכונותיהם",
+          "date": "2026-12-02",
+          "icon": "science"
+        },
+        {
+          "id": "hebrew",
+          "subject": "עברית",
+          "title": "הבנת הנקרא",
+          "date": "2026-12-09",
+          "icon": "book"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "robux-small",
+          "title": "250 רובאקס",
+          "xp": 25,
+          "type": "Robux",
+          "icon": "gift"
+        },
+        {
+          "id": "game",
+          "title": "זמן משחק נוסף",
+          "description": "חצי שעה במשחק לבחירה",
+          "xp": 50,
+          "icon": "game"
+        },
+        {
+          "id": "robux-large",
+          "title": "500 רובאקס",
+          "xp": 75,
+          "type": "Robux",
+          "icon": "gift"
+        },
+        {
+          "id": "vbucks",
+          "title": "1,000 וי־באקס",
+          "xp": 100,
+          "type": "V-Bucks",
+          "icon": "trophy"
+        }
+      ]
+    },
+    {
+      "id": "2026-b",
+      "name": "סמסטר ב׳ · תשפ״ו",
+      "startDate": "2026-02-01",
+      "endDate": "2026-06-30",
+      "exams": [
+        {
+          "id": "math",
+          "subject": "מתמטיקה",
+          "title": "כפל וחילוק",
+          "date": "2026-05-13",
+          "icon": "math"
+        },
+        {
+          "id": "hebrew",
+          "subject": "עברית",
+          "title": "כתיבת סיפור קצר",
+          "date": "2026-05-21",
+          "icon": "book"
+        }
+      ],
+      "rewards": [
+        {
+          "id": "movie",
+          "title": "ערב סרט לבחירה",
+          "xp": 25,
+          "icon": "film"
+        }
+      ],
+      "achievements": [
+        {
+          "id": "studied",
+          "title": "למדתי טוב למבחן",
+          "xp": 10
+        },
+        {
+          "id": "mastery",
+          "title": "השגתי ציון ״שולט היטב״ ומעלה",
+          "xp": 10
+        },
+        {
+          "id": "excellent",
+          "title": "השגתי ציון ״מצטיין״",
+          "xp": 5,
+          "requires": "mastery"
+        }
+      ]
+    }
+  ]
+}
