@@ -7,6 +7,7 @@ coverage/
 *.local
 *.log
 .vercel/
+gha-creds-*.json
 firebase-debug.log*
 firestore-debug.log*
 ui-debug.log*

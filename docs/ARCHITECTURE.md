@@ -41,3 +41,5 @@ Membership records can represent many-to-many access. Authorized clients must ha
 ## Build and verification
 
 Vite reads the Web SDK configuration from `.env.example`. The Firebase Hosting predeploy hook checks the configured project and builds `dist/`. Deploying requires explicit approval, including approval for the public-access rules. Unit tests cover business logic and dashboard controls. The loopback Firestore emulator tests the rules and persistence without touching production.
+
+The GitHub Actions workflow verifies pushes and publishes Hosting only from the canonical repository's `main` branch. It uses Google Workload Identity Federation with a short-lived deploy identity. The identity can publish Hosting and read the deployed rules and required project metadata. It cannot modify Firestore rules or data. Before deploying, the workflow compares the live default ruleset with `firestore.rules` and fetches the Web SDK settings from the registered app. The release stops if the rules or target configuration differ.

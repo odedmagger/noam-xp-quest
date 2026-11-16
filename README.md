@@ -40,16 +40,16 @@ Use a Firebase project with a default Firestore database and a registered Web ap
 
 **Do not deploy the new rules or publish this build without the product owner's approval for the named project.** Until then, use the emulator. This release intentionally permits unauthenticated writes to the active semester. Anyone who can reach the Firestore path can change statuses or claim rewards, and abusive traffic can consume quota. Rules restrict paths, fields and value types. Keep sensitive personal details out of public progress records.
 
-When authorized, verify the project ID and inspect the current database and rules. Run the checks above. Apply and verify the rules first, then publish Hosting:
+When authorized, verify the project ID and inspect the current database and rules. Run the checks above. Apply and verify the rules separately:
 
 ```sh
 npx firebase login
 npx firebase deploy --only firestore:rules --project YOUR_PROJECT_ID
-# Verify public reads and active-semester writes, and confirm all other paths are denied.
-npx firebase deploy --only hosting --project YOUR_PROJECT_ID
 ```
 
-The Hosting predeploy hook checks the configured project and builds fresh static files. After release, verify the public URL and try an approved test edit and redraw on a second device. Keep test edits out of existing student progress. This student-editing revision has no verified hosted URL yet.
+Verify public reads and active-semester writes, and confirm all other paths are denied. Publishing the approved release to `main` triggers the [Firebase Hosting workflow](.github/workflows/firebase-hosting.yml). It runs all checks, signs in with a short-lived GitHub identity, and checks that the live rules match the commit before it builds and publishes. Rules or migrations need separate approval and execution. If the rules check fails, the current hosted version stays live. Rerun the workflow after the approved rules have propagated.
+
+After release, verify the public URL and try an approved test edit and refresh on a second device. Keep test edits out of existing student progress. This student-editing revision has no verified hosted URL yet.
 
 ## Configure a semester
 
