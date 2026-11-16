@@ -2,7 +2,7 @@ import process from 'node:process'
 import { loadEnv } from 'vite'
 
 const env = loadEnv('production', process.env.PROJECT_DIR ?? process.cwd(), 'VITE_FIREBASE_')
-const required = ['API_KEY', 'AUTH_DOMAIN', 'PROJECT_ID', 'APP_ID'].map(key => 'VITE_FIREBASE_' + key)
+const required = ['API_KEY', 'PROJECT_ID', 'APP_ID'].map(key => 'VITE_FIREBASE_' + key)
 const missing = required.filter(key => !env[key]?.trim())
 const projectId = env.VITE_FIREBASE_PROJECT_ID?.trim()
 const targetProject = process.env.GCLOUD_PROJECT

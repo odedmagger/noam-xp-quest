@@ -1,31 +1,43 @@
 # Architecture
 
-The app uses React and TypeScript with Vite for local development and static builds. Tailwind CSS supplies utilities and the responsive theme. Native controls support keyboard input and iPad pickers. Heebo loads locally and Motion for React animates XP and the progress bar. Vitest covers the product rules and ESLint and TypeScript check the source.
+The app uses React, TypeScript, Vite, Tailwind CSS, Motion and Vitest. JSON defines the semesters, exams, achievements, thresholds and reward descriptions. Firebase initializes only Firestore in the browser. There is no login or Auth listener in this release.
 
 | Area | Responsibility |
 | --- | --- |
-| `src/data` | Semester JSON and runtime validation for field types, IDs, dates, dependency graphs and reachable rewards |
-| `src/quest.ts` | Domain types and pure functions for achievement transitions, XP and reward eligibility |
-| `src/cloud-progress.ts` | SDK-independent progress repository contract and conflict errors |
-| `src/cloud` | Modular Firebase initialization, Firestore repository and parent authentication and approval |
-| `src/progress-store.ts` | Validation and backup encoding for the Phase 1 localStorage schema |
-| `src/App.tsx` | Dashboard, semester selection and cloud read and write states |
-| `src/components` | Exam table and reward ladder presentation and interactions |
+| `src/data` | Validated JSON configuration and the single-student storage binding |
+| `src/quest.ts` | Pure domain functions for achievement dependencies, XP and reward eligibility |
+| `src/cloud-progress.ts` | SDK-independent repository contract |
+| `src/cloud` | Modular Firebase initialization and Firestore adapter |
+| `src/progress-store.ts` | Phase 1 localStorage normalization and semester-tagged backups |
+| `src/App.tsx`, `src/components` | Dashboard, inline editing, load and save feedback, and import confirmation |
 
-## Firestore data and security
+## Student identity and persistence
 
-Each `semesters/{semesterId}` document contains `schemaVersion` (1), a `statuses` map keyed by `examId:achievementId`, a `claims` map keyed by reward ID with `true` for delivered rewards, and a server-managed `updatedAt`. There are no account details or XP balances in this public document. A single document lets the small family workload apply exam dependencies, reward eligibility and one-time imports in a transaction against the latest progress. On retry, edits retain concurrent changes to unrelated achievements. If two parents edit the same field, the last committed edit wins.
+`src/data/student.ts` assigns the application-level student ID `noam` to the existing `semesters` collection. The collection is this student's storage namespace. No account record or database migration is needed. The repository receives its collection when initialized, and the UI deals with semester IDs and domain objects. The application-level ID is not an authorization credential.
 
-The rules allow direct public reads of semester documents and deny collection listing and all unrelated paths. A write requires a Google-authenticated UID and an enabled `parents/{uid}` document. Signed-in Google users can read only their own approval record. Client writes to the allowlist are denied. Rules validate the document shape, values, and server timestamp. Configurable XP and reward requirements are enforced by the repository and pure domain functions. Approved parents are trusted editors of valid progress documents.
+The existing `semesters/{semesterId}` schema remains unchanged: `schemaVersion`, a `statuses` map keyed by `examId:achievementId`, a `claims` map keyed by reward ID, and a server-generated `updatedAt`. The document contains no independent XP balance or account details.
 
-Normal visits attach a public Firestore listener without signing in. The parent action opens a Google popup on demand. Firebase Auth keeps supported local sessions, and a separate listener checks the signed-in UID's approval. Approval must come from the server to enable editing. A missing semester is treated as empty only after server confirmation. The app retains the last confirmed view during a connection interruption while disabling edits. Malformed documents surface a load error. Transactions require connectivity and report saved only after acknowledgement.
+On open, refresh or semester change, the repository reads that document from the server. An absent document is treated as empty only after a successful read. The UI previews edits immediately. A Firestore transaction applies dependency changes together and preserves unrelated keys. The returned snapshot becomes authoritative when the transaction confirms. On failure, the UI restores the last confirmed state and offers retry if appropriate. No live listener, polling or offline write queue is used. A future adapter can add subscriptions without changing the domain rules.
 
-## Legacy migration
+The importer reads the Phase 1 browser value or a semester-tagged backup. It normalizes known IDs and requires explicit confirmation plus an absent active-semester document. The original data is retained. Historical cloud documents stay in place. Older local records can be exported for a separately approved import.
 
-Phase 1 progress is read from `noam-xp-quest:v1:<semester-id>` on the current origin or from a semester-tagged backup. The importer normalizes known IDs and achievement prerequisites and preserves recorded claims. The transaction requires a missing cloud document. Reset writes an empty cloud document, so old local progress cannot be re-imported after a deliberate reset. The importer leaves local data intact, including on conflict. Backup files are parsed in the browser.
+## Temporary security model
 
-## Configuration and deployment
+The rules allow public document reads for configured semesters and public creates and updates only for the active semester. The rules deny listing, unrelated paths, document deletion and removal of recorded status or claim keys. They validate the document shape, allowed new or changed keys, known status values, reward claim values and the server timestamp. Retired keys already stored are preserved on ordinary saves.
 
-Vite reads Firebase web configuration at build time from the variables listed in `.env.example`. Firebase Hosting serves the static `dist/` bundle. Its predeploy hook verifies the configured project against the deployment target and builds fresh assets. Authorize the Hosting hostname in Firebase Authentication. Use a separate Firebase project for any preview that needs cloud testing with sample data. Deploy and verify `firestore.rules` separately before publishing Hosting. The browser talks directly to Firebase Authentication and Firestore.
+Generate the rule's semester IDs and allowed keys from JSON with `npm run rules:sync`. `npm run rules:check` rejects mismatches before emulator tests and rules deployments. The repository enforces XP and claim eligibility when the dashboard writes. Direct public requests can still manipulate valid statuses and claim values, and can consume quota. Schema checks limit scope and preserve records, but provide no actor authentication. Deployment of these rules requires separate approval. The currently hosted project keeps its existing rules until that approval.
 
-Vitest covers domain rules, legacy backup validation and auth state changes. The local Firebase Emulator Suite separately tests public and parent permissions, malformed writes, concurrent edits, real-time subscriptions, reward claims and migration conflicts. Emulator mode is limited to Vite development and uses a fixed `demo-` project ID and loopback endpoints.
+## Future account and student model
+
+Firebase Authentication with managed email/password is the preferred candidate. Keep provider identities separate from student profiles. For example:
+
+- `accounts/{accountId}`
+- `students/{studentId}`
+- `students/{studentId}/semesters/{semesterId}/progress/{examId}`
+- `students/{studentId}/semesters/{semesterId}/rewardClaims/{rewardId}`
+
+Membership records can represent many-to-many access. Authorized clients must have explicit membership enforced by Firestore rules. A client-provided student ID never proves access. Each student may later have independently stored configuration and an administration UI. Before migrating, inventory and back up the existing collection, then map it to the `noam` namespace while preserving semester IDs, statuses and claims. Verify the copy and access rules before switching the app. Keep the original during the transition. No migration is performed in this release.
+
+## Build and verification
+
+Vite reads the Web SDK configuration from `.env.example`. The Firebase Hosting predeploy hook checks the configured project and builds `dist/`. Deploying requires explicit approval, including approval for the public-access rules. Unit tests cover business logic and dashboard controls. The loopback Firestore emulator tests the rules and persistence without touching production.

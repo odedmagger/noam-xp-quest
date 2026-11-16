@@ -1,12 +1,11 @@
 {
-  "firestore": { "rules": "firestore.rules" },
+  "firestore": { "rules": "firestore.rules", "predeploy": ["npm run rules:check"] },
   "hosting": {
     "public": "dist",
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "predeploy": ["node scripts/check-firebase-hosting.mjs", "npm run build"]
   },
   "emulators": {
-    "auth": { "host": "127.0.0.1", "port": 9099 },
     "firestore": { "host": "127.0.0.1", "port": 8080 },
     "ui": { "host": "127.0.0.1", "port": 4000 },
     "singleProjectMode": true

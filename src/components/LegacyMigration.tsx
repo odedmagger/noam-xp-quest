@@ -13,9 +13,10 @@ function downloadBackup(semesterId: string, original: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
-export function LegacyMigration({ semester, snapshot, enabled, onImport }: {
+export function LegacyMigration({ semester, snapshot, importAllowed, enabled, onImport }: {
   semester: Semester
-  snapshot: CloudProgress | null
+  snapshot: CloudProgress
+  importAllowed: boolean
   enabled: boolean
   onImport: (progress: Progress) => Promise<boolean>
 }) {
@@ -31,7 +32,8 @@ export function LegacyMigration({ semester, snapshot, enabled, onImport }: {
   const [imported, setImported] = useState(false)
   const [error, setError] = useState('')
   const candidate = backup ?? local
-  const canImport = enabled && snapshot?.exists === false && candidate?.hasProgress && !imported
+  const empty = importAllowed && !snapshot.exists
+  const canImport = empty && enabled && candidate?.hasProgress && !imported
 
   async function pickBackup(file: File) {
     setConfirm(false)
@@ -44,15 +46,16 @@ export function LegacyMigration({ semester, snapshot, enabled, onImport }: {
     }
   }
 
-  if (snapshot?.exists && !candidate && !imported) return null
+  if (!empty && !candidate && !imported) return null
   return <details className="banner migration">
     <summary>{local ? 'נמצא עותק מקומי של ההתקדמות' : 'ייבוא התקדמות מגיבוי'}</summary>
     {imported ? <p role="status">הייבוא לענן הושלם. העותק המקורי נשמר.</p> :
-      snapshot?.exists ? <p>כבר קיימת התקדמות בענן לסמסטר הזה. אפשר להוריד גיבוי בלי לשנות את הנתונים בענן.</p> :
-        <p>אפשר לייבא התקדמות לסמסטר שהענן עדיין ריק בו. הייבוא שומר על העותק המקורי.</p>}
-    <div className="parent-banner">
+      !importAllowed ? <p>זהו סמסטר קודם. אפשר להוריד גיבוי של העותק המקומי.</p> :
+        snapshot.exists ? <p>כבר קיימת התקדמות בענן לסמסטר הזה. אפשר להוריד גיבוי בלי לשנות את הנתונים בענן.</p> :
+          <p>אפשר לייבא התקדמות לסמסטר שהענן עדיין ריק בו. הייבוא שומר על העותק המקורי.</p>}
+    <div className="action-banner">
       {local && <button type="button" onClick={() => downloadBackup(semester.id, local.original)}>הורדת גיבוי מקומי</button>}
-      {snapshot?.exists === false && !imported && <label className="backup-picker">
+      {empty && !imported && <label className="backup-picker">
         קובץ גיבוי
         <input type="file" accept=".json,application/json" disabled={!enabled} onChange={event => {
           const file = event.currentTarget.files?.[0]
@@ -65,7 +68,7 @@ export function LegacyMigration({ semester, snapshot, enabled, onImport }: {
       </button>}
     </div>
     {error && <p role="alert">{error}</p>}
-    {confirm && candidate && snapshot?.exists === false && <div className="parent-banner migration-confirm" role="group" aria-label="אישור ייבוא">
+    {confirm && candidate && empty && <div className="action-banner" role="group" aria-label="אישור ייבוא">
       <span>לייבא את ההישגים והפרסים של {semester.name}?</span>
       <button type="button" onClick={() => setConfirm(false)}>ביטול</button>
       <button type="button" disabled={!canImport} onClick={async () => {

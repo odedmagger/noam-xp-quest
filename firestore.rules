@@ -1,14 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedInWithGoogle() {
-      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'google.com';
-    }
-
-    function approvedParent() {
-      return signedInWithGoogle()
-        && get(/databases/$(database)/documents/parents/$(request.auth.uid)).data.enabled == true;
-    }
+    // BEGIN GENERATED SEMESTER CONFIG
+    function knownSemester(id) { return id in ["2026-a","2026-b"]; }
+    function activeSemester(id) { return id == "2026-a"; }
+    function activeStatusKeys() { return ["math:studied","math:mastery","math:excellent","english:studied","english:mastery","english:excellent","science:studied","science:mastery","science:excellent","hebrew:studied","hebrew:mastery","hebrew:excellent"]; }
+    function activeRewardKeys() { return ["robux-small","game","robux-large","vbucks"]; }
+    // END GENERATED SEMESTER CONFIG
 
     function validProgress(data) {
       return data.keys().hasAll(['schemaVersion', 'statuses', 'claims', 'updatedAt'])
@@ -19,15 +17,17 @@ service cloud.firestore {
         && data.updatedAt == request.time;
     }
 
+    // The prototype grants public access only to configured semester documents.
     match /semesters/{semesterId} {
-      allow get: if true;
-      allow create, update: if approvedParent()
-        && semesterId.matches('^[a-z0-9][a-z0-9_-]*$')
-        && validProgress(request.resource.data);
-    }
-
-    match /parents/{uid} {
-      allow get: if signedInWithGoogle() && request.auth.uid == uid;
+      allow get: if knownSemester(semesterId);
+      allow create: if activeSemester(semesterId) && validProgress(request.resource.data)
+        && request.resource.data.statuses.keys().hasOnly(activeStatusKeys())
+        && request.resource.data.claims.keys().hasOnly(activeRewardKeys());
+      allow update: if activeSemester(semesterId) && validProgress(request.resource.data)
+        && request.resource.data.statuses.diff(resource.data.statuses).removedKeys().size() == 0
+        && request.resource.data.statuses.diff(resource.data.statuses).affectedKeys().hasOnly(activeStatusKeys())
+        && request.resource.data.claims.diff(resource.data.claims).removedKeys().size() == 0
+        && request.resource.data.claims.diff(resource.data.claims).affectedKeys().hasOnly(activeRewardKeys());
     }
   }
 }

@@ -3,11 +3,12 @@ import { canClaim, type Progress, type rewardLadder } from '../quest'
 
 const icons = { gift: Gift, game: Gamepad2, film: Film, trophy: Trophy }
 
-export function RewardLadder({ ladder, progress, xp, editable, onClaim }: {
+export function RewardLadder({ ladder, progress, xp, editable, saving, onClaim }: {
   ladder: ReturnType<typeof rewardLadder>
   progress: Progress
   xp: number
   editable: boolean
+  saving: boolean
   onClaim: (id: string) => void
 }) {
   return <aside className="panel reward-panel" aria-labelledby="rewards-title">
@@ -31,7 +32,7 @@ export function RewardLadder({ ladder, progress, xp, editable, onClaim }: {
             <strong>{reward.title}</strong>
             {reward.description && <small>{reward.description}</small>}
             {claimed && !unlocked && <small className="below-threshold">נמסר בעבר. ה־XP כרגע מתחת לרף.</small>}
-            {editable && canClaim(progress, reward, xp) && <button className="claim-button" type="button"
+            {editable && canClaim(progress, reward, xp) && <button className="claim-button" type="button" disabled={saving}
               onClick={() => onClaim(reward.id)} aria-label={'סימון כנמסר: ' + reward.title}>סימון כנמסר</button>}
           </div>
         </li>

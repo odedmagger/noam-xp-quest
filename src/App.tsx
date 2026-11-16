@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown, CircleAlert, Pencil, ShieldCheck, Swords, Zap } from 'lucide-react'
+import { CalendarDays, ChevronDown, CircleAlert, Swords, Zap } from 'lucide-react'
 import { animate, motion, useReducedMotion } from 'motion/react'
 import { readConfig } from './data/config'
 import { ExamTable } from './components/ExamTable'
 import { RewardLadder } from './components/RewardLadder'
-import { ParentControls, useParentControls } from './components/ParentControls'
 import { LegacyMigration } from './components/LegacyMigration'
 import { getCloudServices } from './cloud/firebase'
 import { ProgressConflict, type CloudProgress, type ProgressStore } from './cloud-progress'
-import { maximumXp, rewardLadder, totalXp, type Config, type Semester } from './quest'
+import { changeAchievement, claimReward, maximumXp, rewardLadder, totalXp, type Config, type Progress, type Semester } from './quest'
 
 function XpCount({ xp }: { xp: number }) {
   const [display, setDisplay] = useState(xp)
@@ -33,24 +32,23 @@ function XpCount({ xp }: { xp: number }) {
 export default function App() {
   const [setup] = useState(() => {
     try {
-      return { config: readConfig(), services: getCloudServices() }
+      return { config: readConfig(), store: getCloudServices() }
     } catch (error) {
       return { error: error instanceof Error ? error.message : String(error) }
     }
   })
 
-  if (!setup.config || !setup.services) return <main className="shell main-content">
+  if (!setup.config || !setup.store) return <main className="shell main-content">
     <section className="panel error-panel" role="alert">
       <CircleAlert size={24} /><h1>שגיאה בהגדרת המסלול</h1><p><bdi>{setup.error}</bdi></p>
     </section>
   </main>
 
-  return <Dashboard config={setup.config} services={setup.services} />
+  return <Dashboard config={setup.config} store={setup.store} />
 }
 
-function Dashboard({ config, services }: { config: Config; services: ReturnType<typeof getCloudServices> }) {
+function Dashboard({ config, store }: { config: Config; store: ProgressStore }) {
   const [semesterId, setSemesterId] = useState(config.activeSemesterId)
-  const parent = useParentControls(services.parent)
   const semester = config.semesters.find(item => item.id === semesterId)!
   const active = semesterId === config.activeSemesterId
 
@@ -58,20 +56,15 @@ function Dashboard({ config, services }: { config: Config; services: ReturnType<
     <header className="site-header">
       <div className="shell header-content">
         <div className="brand"><span className="brand-icon"><Swords size={20} /></span><strong>המסע של נועם</strong></div>
-        <div className="header-actions">
-          <label className="semester-control">
-            <CalendarDays size={16} aria-hidden="true" />
-            <select aria-label="בחירת סמסטר" value={semesterId} onChange={event => setSemesterId(event.target.value)}>
-              {config.semesters.map(item => <option key={item.id} value={item.id}>
-                {item.name}{item.id === config.activeSemesterId ? ' (פעיל)' : ''}
-              </option>)}
-            </select>
-            <ChevronDown size={14} aria-hidden="true" />
-          </label>
-          <button className="parent-toggle" type="button" aria-expanded={parent.open} onClick={parent.toggle}>
-            {parent.editing ? <ShieldCheck size={16} /> : <Pencil size={16} />} מצב הורה
-          </button>
-        </div>
+        <label className="semester-control">
+          <CalendarDays size={16} aria-hidden="true" />
+          <select aria-label="בחירת סמסטר" value={semesterId} onChange={event => setSemesterId(event.target.value)}>
+            {config.semesters.map(item => <option key={item.id} value={item.id}>
+              {item.name}{item.id === config.activeSemesterId ? ' (פעיל)' : ''}
+            </option>)}
+          </select>
+          <ChevronDown size={14} aria-hidden="true" />
+        </label>
       </div>
     </header>
     <main className="shell main-content">
@@ -80,53 +73,58 @@ function Dashboard({ config, services }: { config: Config; services: ReturnType<
         <h1>המסע של נועם<span>.</span></h1>
         <p>כל הישג במבחן מקרב אותך לפרס הבא.</p>
       </div>
-      <ParentControls controls={parent} />
-      <Quest key={semester.id} semester={semester} active={active} parentMode={parent.editing} store={services.progress} />
+      <Quest key={semester.id} semester={semester} active={active} store={store} />
     </main>
   </>
 }
 
-function Quest({ semester, active, parentMode, store }: {
-  semester: Semester
-  active: boolean
-  parentMode: boolean
-  store: ProgressStore
-}) {
+type SaveAction = {
+  run: () => Promise<CloudProgress>
+  preview?: (progress: Progress) => Progress
+}
+
+type SaveState =
+  | { kind: 'idle' | 'saved' }
+  | { kind: 'saving'; progress: Progress }
+  | { kind: 'error'; message: string; retry?: SaveAction }
+
+function Quest({ semester, active, store }: { semester: Semester; active: boolean; store: ProgressStore }) {
   const [snapshot, setSnapshot] = useState<CloudProgress | null>(null)
-  const [connection, setConnection] = useState<'loading' | 'waiting' | 'synced' | 'error'>('loading')
-  const [listenAttempt, setListenAttempt] = useState(0)
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
-  const [saveError, setSaveError] = useState('')
-  const [confirmReset, setConfirmReset] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const [saveState, setSaveState] = useState<SaveState>({ kind: 'idle' })
   const saving = useRef(false)
   const reducedMotion = useReducedMotion()
 
-  useEffect(() => store.subscribe(semester, event => {
-    setConnection(event.kind)
-    if (event.kind === 'synced') setSnapshot(event.value)
-  }), [semester, store, listenAttempt])
-
   useEffect(() => {
-    if (!parentMode) setConfirmReset(false)
-  }, [parentMode])
+    let current = true
+    void store.load(semester).then(value => {
+      if (current) setSnapshot(value)
+    }).catch(() => {
+      if (current) setLoadFailed(true)
+    })
+    return () => { current = false }
+  }, [semester, store, loadAttempt])
 
-  async function save(action: () => Promise<void>) {
-    if (!canWrite || saving.current) return false
+  async function save(action: SaveAction) {
+    if (!active || !snapshot || saving.current) return false
+    const progress = action.preview?.(snapshot.progress) ?? snapshot.progress
+    if (action.preview && progress === snapshot.progress) return false
     saving.current = true
-    setSaveState('saving')
-    setSaveError('')
+    setSaveState({ kind: 'saving', progress })
     try {
-      await action()
-      setSaveState('saved')
+      setSnapshot(await action.run())
+      setSaveState({ kind: 'saved' })
       return true
     } catch (error) {
-      setSaveState('error')
       if (error instanceof ProgressConflict) {
-        setSaveError(error.reason === 'existing-progress'
+        setSnapshot(error.current)
+        const message = error.reason === 'existing-progress'
           ? 'כבר יש נתונים בענן. העותק המקומי נשמר ואפשר להוריד גיבוי.'
-          : 'הפרס כבר לא זמין לפי הנקודות העדכניות.')
+          : 'הפרס כבר לא זמין לפי הנקודות העדכניות.'
+        setSaveState({ kind: 'error', message })
       } else {
-        setSaveError('השינוי לא נשמר בענן. בדקו את החיבור וההרשאה ונסו שוב.')
+        setSaveState({ kind: 'error', message: 'השינוי לא נשמר. אפשר לבדוק את החיבור ולנסות שוב.', retry: action })
       }
       return false
     } finally {
@@ -134,49 +132,33 @@ function Quest({ semester, active, parentMode, store }: {
     }
   }
 
-  const progress = snapshot?.progress
-  const cloudEditable = parentMode && connection === 'synced' && !!snapshot
-  const canWrite = cloudEditable && saveState !== 'saving'
-  const editable = active && cloudEditable && !confirmReset
+  const isSaving = saveState.kind === 'saving'
+  const progress = isSaving ? saveState.progress : snapshot?.progress
+  const retry = saveState.kind === 'error' ? saveState.retry : undefined
+  const editable = active && !!snapshot
   const xp = progress ? totalXp(progress, semester) : 0
   const max = maximumXp(semester)
   const ladder = rewardLadder(semester, xp)
 
   return <>
-    {connection === 'loading' && <p role="status" className="banner">טוען התקדמות מהענן…</p>}
-    {connection === 'waiting' && <p role="status" className="banner">
-      {snapshot ? 'ממתין לחיבור לענן. מוצגת ההתקדמות האחרונה שאושרה.' : 'ממתין לחיבור לענן כדי לטעון התקדמות.'}
-    </p>}
-    {connection === 'error' && <div className="banner parent-banner error">
-      <span role="alert"><CircleAlert size={18} /> לא ניתן לקרוא התקדמות עדכנית מהענן.</span>
+    {!snapshot && !loadFailed && <p role="status" className="banner">טוען התקדמות מהענן…</p>}
+    {loadFailed && <div className="banner action-banner error">
+      <span role="alert"><CircleAlert size={18} /> לא ניתן לטעון את ההתקדמות מהענן.</span>
       <button type="button" onClick={() => {
-        setConnection('loading')
-        setListenAttempt(value => value + 1)
+        setLoadFailed(false)
+        setLoadAttempt(value => value + 1)
       }}>ניסיון חוזר</button>
     </div>}
-    {parentMode && active && <div className="banner edit-banner">
-      <span><Pencil size={16} />בחרו סטטוס בתא של הישג או סמנו פרס שנמסר. השינויים נשמרים אוטומטית.</span>
-      {!confirmReset && <button type="button" onClick={() => setConfirmReset(true)} disabled={!canWrite}>איפוס סמסטר</button>}
+    {active && snapshot && <div className="save-feedback" role="status">
+      {saveState.kind === 'saving' ? 'שומר בענן…' : saveState.kind === 'saved' ? 'השינוי נשמר בענן.' : null}
     </div>}
-    {parentMode && active && confirmReset && <div className="banner edit-banner error" role="group" aria-label="אישור איפוס סמסטר">
-      <span>לאפס את ההישגים ואת רישום הפרסים של הסמסטר הזה?</span>
-      <div className="reset-actions">
-        <button type="button" autoFocus onClick={() => setConfirmReset(false)}>ביטול</button>
-        <button type="button" disabled={!canWrite} onClick={() => {
-          setConfirmReset(false)
-          void save(() => store.reset(semester))
-        }}>כן, לאפס</button>
-      </div>
+    {saveState.kind === 'error' && <div className="banner action-banner error">
+      <span role="alert">{saveState.message}</span>
+      {retry && <button type="button" onClick={() => { void save(retry) }}>ניסיון חוזר</button>}
     </div>}
-    {parentMode && <>
-      {saveState === 'saving' && <p className="banner" role="status">שומר בענן…</p>}
-      {saveState === 'saved' && <p className="banner" role="status">השינוי נשמר בענן.</p>}
-      {saveError && <p className="banner error" role="alert">{saveError}</p>}
-      <LegacyMigration semester={semester} snapshot={snapshot} enabled={canWrite && !confirmReset}
-        onImport={legacy => save(() => store.importLegacy(semester, legacy))} />
-    </>}
     {progress && <div className="dashboard">
       <div className="main-column">
+
         <section className="hero" aria-labelledby="xp-title">
           <div className="hero-art" aria-hidden="true">
             <div className="art-grid" />
@@ -198,11 +180,23 @@ function Quest({ semester, active, parentMode, store }: {
             </div>
           </div>
         </section>
-        <ExamTable semester={semester} progress={progress} editable={editable} saving={saveState === 'saving'}
-          onChange={(exam, achievement, status) => { void save(() => store.updateAchievement(semester, exam, achievement, status)) }} />
+        <ExamTable semester={semester} progress={progress} editable={editable} saving={isSaving}
+          onChange={(exam, achievement, status) => {
+            void save({
+              preview: value => changeAchievement(value, semester, exam, achievement, status),
+              run: () => store.updateAchievement(semester, exam, achievement, status),
+            })
+          }} />
       </div>
-      <RewardLadder ladder={ladder} progress={progress} xp={xp} editable={editable && canWrite}
-        onClaim={id => { void save(() => store.claimReward(semester, id)) }} />
+      <RewardLadder ladder={ladder} progress={progress} xp={xp} editable={editable} saving={isSaving}
+        onClaim={id => {
+          void save({
+            preview: value => claimReward(value, semester, id),
+            run: () => store.claimReward(semester, id),
+          })
+        }} />
     </div>}
+    {snapshot && <LegacyMigration semester={semester} snapshot={snapshot} importAllowed={active} enabled={!isSaving}
+      onImport={legacy => save({ run: () => store.importLegacy(semester, legacy) })} />}
   </>
 }

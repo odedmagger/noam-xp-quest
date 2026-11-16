@@ -1,4 +1,4 @@
-import { doc, getDocFromServer, onSnapshot, runTransaction, serverTimestamp, type Firestore } from 'firebase/firestore'
+import { doc, getDocFromServer, runTransaction, serverTimestamp, type CollectionReference } from 'firebase/firestore'
 import { ProgressConflict, type CloudProgress, type ProgressStore } from '../cloud-progress'
 import { normalizeProgress } from '../progress-store'
 import { changeAchievement, claimReward, emptyProgress, isStatus, type Progress, type Semester, type Status } from '../quest'
@@ -51,8 +51,8 @@ function writeProgress(progress: Progress, previous?: RecordData): RecordData {
   return { schemaVersion: 1, statuses, claims }
 }
 
-export function createFirestoreStore(db: Firestore): ProgressStore {
-  const semesterDoc = (semester: Semester) => doc(db, 'semesters', semester.id)
+export function createFirestoreStore(semesters: CollectionReference): ProgressStore {
+  const semesterDoc = (semester: Semester) => doc(semesters, semester.id)
 
   async function load(semester: Semester): Promise<CloudProgress> {
     const snapshot = await getDocFromServer(semesterDoc(semester))
@@ -61,63 +61,46 @@ export function createFirestoreStore(db: Firestore): ProgressStore {
       : { exists: false, progress: emptyProgress() }
   }
 
-  async function transact(semester: Semester, apply: (progress: Progress, data?: RecordData) => RecordData | undefined) {
+  function transact(semester: Semester, apply: (current: CloudProgress, data?: RecordData) => RecordData | undefined) {
     const reference = semesterDoc(semester)
-    await runTransaction(db, async transaction => {
+    return runTransaction(semesters.firestore, async transaction => {
       const snapshot = await transaction.get(reference)
       const data = snapshot.exists() ? decode(snapshot.data()) : undefined
-      const progress = data ? readProgress(semester, data) : emptyProgress()
-      const next = apply(progress, data)
-      if (next) transaction.set(reference, { ...next, updatedAt: serverTimestamp() })
+      const current = { exists: !!data, progress: data ? readProgress(semester, data) : emptyProgress() }
+      const next = apply(current, data)
+      if (!next) return current
+      transaction.set(reference, { ...next, updatedAt: serverTimestamp() })
+      return { exists: true, progress: readProgress(semester, next) }
     })
   }
 
   return {
     load,
-    subscribe(semester, onEvent) {
-      return onSnapshot(semesterDoc(semester), { includeMetadataChanges: true }, snapshot => {
-        if (snapshot.metadata.fromCache) {
-          onEvent({ kind: 'waiting' })
-          return
-        }
-        if (snapshot.metadata.hasPendingWrites) return
-        try {
-          const value = snapshot.exists()
-            ? { exists: true, progress: readProgress(semester, decode(snapshot.data())) }
-            : { exists: false, progress: emptyProgress() }
-          onEvent({ kind: 'synced', value })
-        } catch {
-          onEvent({ kind: 'error' })
-        }
-      }, () => onEvent({ kind: 'error' }))
-    },
-    async loadRewardClaims(semester) {
-      return (await load(semester)).progress.claimed
-    },
     updateAchievement(semester, examId, achievementId, status) {
       if (!isStatus(status)) return Promise.reject(new Error('Invalid achievement status'))
-      return transact(semester, (progress, data) => {
+      return transact(semester, ({ progress }, data) => {
         const next = changeAchievement(progress, semester, examId, achievementId, status)
         return next === progress ? undefined : writeProgress(next, data)
       })
     },
     claimReward(semester, rewardId) {
-      return transact(semester, (progress, data) => {
+      return transact(semester, (current, data) => {
+        const { progress } = current
         if (progress.claimed.includes(rewardId)) return
         const next = claimReward(progress, semester, rewardId)
-        if (next === progress) throw new ProgressConflict('reward-unavailable')
+        if (next === progress) throw new ProgressConflict('reward-unavailable', current)
         return writeProgress(next, data)
       })
     },
     importLegacy(semester, legacy) {
       const validated = normalizeProgress(legacy, semester)
-      return transact(semester, (_progress, data) => {
-        if (data) throw new ProgressConflict('existing-progress')
+      if (!Object.keys(validated.exams).length && !validated.claimed.length) {
+        return Promise.reject(new Error('No valid legacy progress'))
+      }
+      return transact(semester, (current, data) => {
+        if (data) throw new ProgressConflict('existing-progress', current)
         return writeProgress(validated)
       })
-    },
-    reset(semester) {
-      return transact(semester, () => writeProgress(emptyProgress()))
     },
   }
 }

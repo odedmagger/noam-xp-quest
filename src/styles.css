@@ -19,16 +19,14 @@ svg { flex-shrink: 0; }
 .shell { width: min(100% - 64px, 1216px); margin-inline: auto; }
 .site-header { background: #101426; border-bottom: 1px solid var(--line); }
 .header-content { @apply flex flex-wrap items-center justify-between gap-3; min-height: 70px; padding-block: 9px; }
-.brand, .header-actions, .semester-control, .parent-toggle { @apply flex items-center; }
+.brand, .semester-control { @apply flex items-center; }
 .brand { gap: 10px; font-size: 1.1rem; letter-spacing: -.025em; }
 .brand-icon, .section-icon, .exam-icon { @apply grid shrink-0 place-items-center; }
 .brand-icon { width: 38px; height: 38px; border-radius: 11px; color: #18132a; background: linear-gradient(145deg,#ffe79d,#f6b958); }
-.header-actions { gap: 9px; flex-wrap: wrap; }
-.semester-control, .parent-toggle { position: relative; gap: 8px; min-height: 44px; padding-inline: 11px; border: 1px solid #333b5c; border-radius: 10px; background: #1b2138; color: #dbe0f7; font-size: .86rem; font-weight: 650; }
+.semester-control { position: relative; gap: 8px; min-height: 44px; padding-inline: 11px; border: 1px solid #333b5c; border-radius: 10px; background: #1b2138; color: #dbe0f7; font-size: .86rem; font-weight: 650; }
 .semester-control > svg { color: #aab4da; pointer-events: none; }
 .semester-control select { appearance: none; background: transparent; min-height: 44px; padding-inline: 27px 27px; margin-inline: -24px; z-index: 1; max-width: 230px; }
 option { background: #1b2138; color: #eef1ff; }
-.parent-toggle:hover, .parent-toggle[aria-expanded="true"] { border-color: #9385e4; background: #332a55; }
 .main-content { padding-block: 35px 50px; }
 .welcome { margin-bottom: 25px; }
 .eyebrow { @apply flex items-center gap-2; color: #bdb4ff; font-size: .85rem; font-weight: 740; }
@@ -114,11 +112,6 @@ td.total-cell.scored { color: var(--gold); }
 .claim-button:hover { background: #ffe7a5; }
 .empty { padding: 10px 18px 16px; color: var(--muted); }
 .banner { @apply flex flex-wrap items-center gap-3; background: #252344; border: 1px solid #554a87; border-radius: 12px; padding: 6px 13px; margin-bottom: 15px; font-size: .88rem; }
-.edit-banner { justify-content: space-between; }
-.edit-banner span { @apply flex items-center gap-2; }
-.edit-banner button { color: #ffcbda; min-height: 44px; padding-inline: 10px; border-radius: 7px; }
-.edit-banner button:hover:enabled { background: #59374f; }
-.reset-actions { display: flex; gap: 4px; }
 .error { color: #ffe2ed; background: #42263d; border-color: #754968; }
 .error-panel { padding: 21px; }
 .error-panel h1 { font-size: 1.6rem; font-weight: 800; }
@@ -159,13 +152,14 @@ td.total-cell.scored { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .status-content, .reward-list li.unlocked { animation: none; }
 }
-.parent-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-.parent-banner > span { display: inline-flex; align-items: center; gap: 7px; }
-.parent-banner button, .backup-picker { min-height: 44px; border: 1px solid #7665a4; border-radius: 8px; padding: 5px 11px; color: #eeeaff; background: #332a55; }
-.parent-banner button:hover:enabled { background: #453773; }
-.migration { display: block; padding-block: 0; }
+.action-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.action-banner > span { display: inline-flex; align-items: center; gap: 7px; }
+.action-banner button, .backup-picker { min-height: 44px; border: 1px solid #7665a4; border-radius: 8px; padding: 5px 11px; color: #eeeaff; background: #332a55; }
+.action-banner button:hover:enabled { background: #453773; }
+.migration { display: block; padding-block: 0; margin-block-start: 15px; }
 .migration summary { cursor: pointer; min-height: 44px; padding-block: 11px; }
-.migration p, .migration .parent-banner { margin-block: 0 9px; }
-.migration .parent-banner { justify-content: flex-start; }
+.migration p, .migration .action-banner { margin-block: 0 9px; }
+.migration .action-banner { justify-content: flex-start; }
 .backup-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 .backup-picker input { max-width: 100%; }
+.save-feedback { min-height: 1.6rem; font-size: .83rem; color: var(--muted); }

@@ -1,16 +1,16 @@
 # Product specification
 
-## Purpose
+## Current release
 
-Help one fourth-grade student build exam preparation habits and celebrate progress. Anyone with the dashboard URL can view its Hebrew RTL interface without signing in. Approved parents record outcomes and physically deliver rewards. The expected scale is three to six exams per semester.
+Noam's XP Quest helps one fourth-grade student build exam preparation habits and celebrate progress. Noam records his own achievements in a Hebrew RTL dashboard designed for desktop and iPad. The visual design remains a restrained game dashboard with navy panels, blue and purple accents, and gold XP highlights.
 
-## Semesters and configuration
+### Semesters and configuration
 
-Each semester has a stable ID, Hebrew name, optional start and end dates, exams, three achievement definitions and a reward ladder. Configuration is maintained as local JSON and validated when loaded. Exactly one configured semester is active. Switching the configured active ID starts a new semester at zero XP when the ID is new. Historical semesters and recorded progress remain available through the semester picker as read-only views. Dates are informational.
+Each semester has a stable ID, a Hebrew name, optional dates, exams, three achievement definitions and a reward ladder. JSON defines configuration and exactly one active semester. A new semester starts at zero XP. Historical semesters remain visible and read-only. Dates are informational. There is no configuration administration UI.
 
-## Exams and XP
+### Exams and XP
 
-The exam table shows the subject, optional title and date, achievement statuses, and earned XP. The three default achievements are:
+The exam table shows subjects, optional exam names and dates, achievement statuses, and earned XP. The default achievements are:
 
 | Achievement | XP |
 | --- | ---: |
@@ -18,33 +18,36 @@ The exam table shows the subject, optional title and date, achievement statuses,
 | השגתי ציון ״שולט היטב״ ומעלה | 10 |
 | השגתי ציון ״מצטיין״ | 5 additional |
 
-Each status is pending, achieved, or not achieved. Achieved statuses contribute their configured points. Marking excellent as achieved also marks mastery achieved. Changing mastery to pending or not achieved returns a previously achieved excellent status to pending. Studying is independent. Parents can correct a status by selecting a different value. XP is derived from statuses and recalculated immediately, with maximum XP derived from all configured exams. Four default exams allow 100 XP and six allow 150 XP.
+Noam changes statuses directly from the active exam table without logging in or enabling Parent Edit Mode. Each cell offers clearly labeled pending, achieved and failed options. Labels, icons and colors distinguish the states. Noam can correct changes, record study before getting a grade, and use touch or keyboard controls.
 
-## Rewards
+Only achieved statuses contribute XP. Achieving excellent also achieves mastery. Changing mastery to pending or failed returns a previously achieved excellent status to pending. Study is independent. The app derives earned XP from the achievement statuses and maximum XP from the configured exams. Four default exams allow 100 XP and six allow 150 XP.
 
-The dashboard displays earned and maximum XP, the number of reward milestones reached, and progress from the latest milestone toward the next. Rewards unlock at their configured XP threshold, including an exact match. An unlocked reward can be marked delivered in Parent Edit Mode. Delivery does not spend XP. A recorded delivery remains visible if an XP correction takes the student below its threshold, with an explicit below-threshold message. The next threshold is visually prominent.
+### Rewards
 
-## Editing and usability
+The dashboard shows earned and maximum XP, milestones reached, and progress toward the next reward. Rewards unlock when XP meets the configured threshold. Noam can mark an unlocked reward as claimed from the dashboard. This does not spend XP. A reward remains recorded as claimed after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
 
-The active semester opens in student view. Visitors can view statuses, XP, rewards and history without starting authentication. Choosing Parent Mode offers Google Sign-In when needed. Editing requires an explicitly approved Google account, and a signed-in account without approval continues in read-only mode. Parent sessions persist where supported, with a sign-out action.
+### Persistence and access
 
-Approved parents can change statuses, record reward delivery and confirm a reset in the active semester. Historical semesters remain read-only except for importing legacy data into an empty cloud record. Edits save to the cloud automatically and display saving, saved or error feedback in Parent Mode. The dashboard waits for the first confirmed cloud snapshot and shows connection issues when progress cannot be refreshed.
+Firestore is the source of truth for achievements and claims. The app loads progress on open, on refresh and when switching semesters. Displayed XP and reward availability respond immediately to edits. The app shows when a change is saving and reports success after Firestore confirms it. If a save fails, it restores the last confirmed display and offers a retry.
 
-Firestore is the source of truth for each semester. Updates appear across open browsers without a refresh. A new semester starts at zero XP and earlier progress remains available. Local prototype data can be imported with an approved parent's confirmation only when the semester has no cloud record. Conflicts leave existing cloud and local data intact, and parents can keep a backup for comparison. The original copy is retained after a successful import.
+A saved change becomes visible on other devices when they open or refresh the app. Already-open tabs do not synchronize automatically. A confirmed import can copy older browser progress into an empty active semester. An existing cloud record blocks import. Local originals and historical records are preserved, and local history can be exported for review.
 
-The interface uses Hebrew RTL, readable touch-friendly controls, keyboard access, clear focus, distinct labels and icons for statuses, and reduced-motion support. The original visual direction is a restrained game dashboard with navy panels, blue and purple accents, and gold XP highlights. The exam table fits typical iPad widths.
+For this temporary single-student prototype, anyone who can reach the website can view progress and edit the active semester without signing in. Direct requests to the allowed Firestore paths also have write access. This means someone else can change achievements or claim rewards, and abuse can consume the project's free quota. Rules limit the affected paths and allowed data structures. Before a general multi-user launch, private progress must require authentication and per-student authorization.
 
-## Acceptance criteria
+### Acceptance criteria
 
-- A new semester is empty, and switching back to an older semester shows its recorded XP and claims.
-- Setting excellent also sets mastery. Revoking mastery revokes excellent while preserving study status.
-- XP and available rewards reflect edits immediately. A delivered reward remains recorded after correction and refresh.
-- The public dashboard opens without signing in. Only approved Google accounts can edit the active semester, and reset requires confirmation.
-- Confirmed changes reach another open browser in real time. Losing connectivity never substitutes legacy local data for cloud progress.
-- An authorized import populates an empty semester once and preserves the source. An existing cloud record blocks import.
-- Exams, achievements and rewards render from valid JSON. Invalid configuration displays a useful diagnostic.
-- The local app runs, the automated checks pass, and the production bundle builds.
+- The active exam table supports direct status updates and corrections, with no login or Parent Edit Mode.
+- Excellent and mastery update together. Study remains independent. XP and reward availability reflect changes immediately.
+- Only eligible rewards can be claimed through the dashboard. Previous claim records survive corrections and refreshes.
+- A fresh browser loads saved progress and claims for the selected semester. A new semester starts at zero, and history remains read-only.
+- The app reports load and save failures clearly, and a failed write can be retried. Import never replaces an existing cloud record.
+- Firestore rejects unrelated paths, historical writes, malformed records and unexpected fields.
+- The automated checks pass, and the production bundle builds.
 
-## Scope
+## Multi-User Support
 
-Phase 2 supports one family, a public read-only dashboard, and cloud-synchronized parent editing with a target operating cost of $0 under normal family usage. The dashboard contains only the information needed to track exams and rewards. Configuration administration, multiple students, AI features, payments, and push notifications are outside scope.
+A future release may add multiple accounts and students. An **account** is a person’s signed-in identity. It will support managed email/password registration, login, logout, recovery and permissions. A **student** is a separate profile with independent semesters, exams, achievements, XP, rewards, claims and history. One account may manage several students, and a student may be accessible to several authorized accounts.
+
+Students will still record their own achievements and claim eligible rewards. Parents or administrators may later configure exams, achievements or rewards. The roles and permission model remain open. Private student data will require sign-in, and Firestore rules must enforce the explicit account-to-student relationships.
+
+Firebase Authentication with managed email/password is the preferred candidate because it integrates with Firestore and supplies account and recovery flows. Auth0 or another managed provider may be evaluated when the multi-user phase starts. Account management, role management, per-student configuration storage, an admin UI, and live synchronization are deferred. The current release does not implement those features.
