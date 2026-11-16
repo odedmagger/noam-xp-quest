@@ -35,16 +35,42 @@ Stop the interactive emulators before running `test:emulator`. The test command 
 
 1. In the [Firebase Console](https://console.firebase.google.com/), create a project on Spark. Register a Web app under Project settings. Create the default Cloud Firestore database in production mode and enable Google under Authentication → Sign-in method.
 2. Copy `.env.example` to `.env.local` or add its keys to your existing local file. Set `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, and `VITE_FIREBASE_APP_ID` from the Web app configuration. These values are part of the client bundle. Keep admin credentials and service-account keys outside the repository and the app.
-3. Run `npm run test:emulator`. After authorizing the target project, run `npx firebase login` and `npx firebase deploy --only firestore:rules --project YOUR_PROJECT_ID`. Use the actual Firebase project ID and verify it before applying rules.
-4. Under Authentication → Settings → Authorized domains, add the hostname used for Google sign-in. Add `localhost` for local testing against real Firebase if needed. Use the stable Vercel hostname for the hosted app.
+3. Run `npx firebase login` with a Google account that can manage Firestore rules and Firebase Hosting for the target project.
+4. Under Authentication → Settings → Authorized domains, verify the intended Firebase Hosting hostname is listed. Add `localhost` if you will test Google sign-in against real Firebase locally.
 
 ### Approve a parent
 
 Have the parent sign in once with Google from **מצב הורה**. They will still have read-only access. In your Firebase Console, confirm the intended account in Authentication → Users and copy its UID. Create a Firestore document `parents/<UID>` with the Boolean field `enabled: true`. The dashboard updates approval automatically. Set it to `false` or remove the document to revoke editing. Keep the allowlist free of email addresses or other profile fields.
 
-### Publish a build
+### Deploy to Firebase Hosting
 
-Supply the four `VITE_FIREBASE_*` web configuration variables to the host's intended environment before building. Use Node.js 24, the Vite preset, `npm run build`, and the output directory `dist`. Keep emulator mode off for hosted builds. For an external preview, use a separate Firebase project and sample data. After an authorized deployment, test the public dashboard while signed out and verify Google sign-in and live updates with an approved parent on two browsers. Anyone with the dashboard link can read the progress, so keep private notes and account details out of the public data.
+Use Node.js 24 and replace `YOUR_PROJECT_ID` with the confirmed Firebase project ID. Fill in the production web SDK settings first, then run the checks:
+
+```sh
+npm run lint
+npm run typecheck
+npm test
+npm run test:emulator
+npm run build
+```
+
+Deploy the rules separately. If the database already serves other applications, review the currently deployed rules before replacing them.
+
+```sh
+npx firebase deploy --only firestore:rules --project YOUR_PROJECT_ID
+```
+
+Verify the rules in Firebase Console. A signed-out client must be able to read a semester document and unable to write it. An unapproved Google account must stay read-only. An allowlisted parent must be able to update an achievement and record an eligible reward. For a live write check, use a dedicated test document with sample data so existing semester records stay intact.
+
+Once the rules and Google sign-in are verified, publish the site:
+
+```sh
+npx firebase deploy --only hosting --project YOUR_PROJECT_ID
+```
+
+The Hosting hook checks the web configuration against the target project and builds fresh static files in `dist/`. Open the HTTPS URL reported by Firebase in a signed-out browser and verify that the dashboard loads. Then smoke-test Google sign-in and live sync with an approved parent. Only include information intended for public viewing in the dashboard.
+
+**Production URL:** pending the first verified Firebase Hosting deployment.
 
 ## Configure a semester
 

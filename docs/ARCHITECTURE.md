@@ -26,6 +26,6 @@ Phase 1 progress is read from `noam-xp-quest:v1:<semester-id>` on the current or
 
 ## Configuration and deployment
 
-Vite reads Firebase web configuration at build time from the variables listed in `.env.example`. Deploy the static `dist/` bundle and authorize its stable hostname in Firebase Authentication. Use a separate Firebase project for any preview that needs cloud testing with sample data. Apply and verify the matching `firestore.rules` before pointing a deployment at that project. The browser talks directly to Firebase Authentication and Firestore.
+Vite reads Firebase web configuration at build time from the variables listed in `.env.example`. Firebase Hosting serves the static `dist/` bundle. Its predeploy hook verifies the configured project against the deployment target and builds fresh assets. Authorize the Hosting hostname in Firebase Authentication. Use a separate Firebase project for any preview that needs cloud testing with sample data. Deploy and verify `firestore.rules` separately before publishing Hosting. The browser talks directly to Firebase Authentication and Firestore.
 
 Vitest covers domain rules, legacy backup validation and auth state changes. The local Firebase Emulator Suite separately tests public and parent permissions, malformed writes, concurrent edits, real-time subscriptions, reward claims and migration conflicts. Emulator mode is limited to Vite development and uses a fixed `demo-` project ID and loopback endpoints.
