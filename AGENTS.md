@@ -10,3 +10,4 @@
 8. Update product or architecture documentation when relevant behavior or architecture changes.
 9. Never silently change product rules.
 10. Prefer autonomous implementation over asking routine technical questions.
+11. After verifying completed source changes, commit the task's changes and push the commit to the corresponding branch on GitHub (`origin`) as part of the same task. Leave unrelated changes out of the commit. Follow any task-specific publishing instructions and report a failed or blocked push.
