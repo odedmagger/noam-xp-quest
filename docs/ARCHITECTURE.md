@@ -14,4 +14,4 @@ Progress contains statuses indexed by exam and achievement ID, plus delivered re
 
 Vitest covers scoring, prerequisites, reward delivery after XP correction, semester isolation, malformed storage and invalid configuration. A production build verifies compilation and bundling. Layout and interactions are checked in a browser during significant UI changes.
 
-For Firebase, implement the async `ProgressStore` interface using one Firestore document per family and semester. Add authentication and ownership rules, decide how to resolve concurrent device edits, and import matching local semester records once. Keep the same validated configuration and domain rules.
+The current app on `main` is the Phase 1 baseline. The Firebase and Google parent-authentication implementation is archived on `phase-2/cloud-persistence`. The [implementation plan](IMPLEMENTATION-PLAN.md) proposes cross-device storage for student editing. This document will record the chosen storage and access design once implemented.

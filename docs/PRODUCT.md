@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Help one fourth-grade student build exam preparation habits and celebrate progress. The student sees a Hebrew RTL dashboard. A parent records outcomes and physically delivers rewards. The expected scale is three to six exams per semester.
+Help Noam build exam preparation habits and celebrate progress. Noam records his own achievements on a Hebrew RTL dashboard. The expected scale is three to six exams per semester for one student.
 
 ## Semesters and configuration
 
@@ -18,15 +18,17 @@ The exam table shows the subject, optional title and date, achievement statuses,
 | השגתי ציון ״שולט היטב״ ומעלה | 10 |
 | השגתי ציון ״מצטיין״ | 5 additional |
 
-Each status is pending, achieved, or not achieved. Achieved statuses contribute their configured points. Marking excellent as achieved also marks mastery achieved. Changing mastery to pending or not achieved returns a previously achieved excellent status to pending. Studying is independent. Parents can correct a status by selecting a different value. XP is derived from statuses and recalculated immediately, with maximum XP derived from all configured exams. Four default exams allow 100 XP and six allow 150 XP.
+Each status is pending, achieved, or not achieved. Achieved statuses contribute their configured points. Marking excellent as achieved also marks mastery achieved. Changing mastery to pending or not achieved returns a previously achieved excellent status to pending. Studying is independent of the grade. Noam can record study progress before receiving a grade and correct either outcome later. XP is derived from saved statuses, with maximum XP derived from all configured exams. Four default exams allow 100 XP and six allow 150 XP.
 
 ## Rewards
 
-The dashboard displays earned and maximum XP, the number of reward milestones reached, and progress from the latest milestone toward the next. Rewards unlock at their configured XP threshold, including an exact match. An unlocked reward can be marked delivered in Parent Edit Mode. Delivery does not spend XP. A recorded delivery remains visible if an XP correction takes the student below its threshold, with an explicit below-threshold message. The next threshold is visually prominent.
+The dashboard displays earned and maximum XP, the number of reward milestones reached, and progress from the latest milestone toward the next. Rewards unlock at their configured XP threshold, including an exact match. Delivery does not spend XP. A recorded delivery remains visible if an XP correction takes the student below its threshold, with an explicit below-threshold message. The next threshold is visually prominent. Existing delivery records must be preserved. Who records future deliveries is open now that Parent Edit Mode is being removed.
 
 ## Editing and usability
 
-The active semester opens in student view. Parent Edit Mode enables status changes, reward delivery and a confirmation-protected reset limited to the active semester. Changes save automatically and survive refreshes on the same browser origin. The mode is a prototype convenience without authentication.
+Noam can edit the active semester directly. He does not need Parent Edit Mode or Google sign-in. Historical semesters remain read-only. The interface shows when a change is saving, saved, or failed and lets Noam retry a failed save without reentering it. Saved statuses and reward history are available on his other authorized devices. Browser-local storage alone cannot meet this requirement.
+
+The editor can live in the table or open a focused view for one exam. The choice is tracked in the [Codex implementation plan](IMPLEMENTATION-PLAN.md). A short XP celebration after a saved improvement is desirable and may ship separately. Where enabled, it honors reduced-motion settings.
 
 The interface uses Hebrew RTL, readable touch-friendly controls, keyboard access, clear focus, distinct labels and icons for statuses, and reduced-motion support. The original visual direction is a restrained game dashboard with navy panels, blue and purple accents, and gold XP highlights. The exam table fits typical iPad widths.
 
@@ -34,11 +36,14 @@ The interface uses Hebrew RTL, readable touch-friendly controls, keyboard access
 
 - A new semester is empty, and switching back to an older semester shows its recorded XP and claims.
 - Setting excellent also sets mastery. Revoking mastery revokes excellent while preserving study status.
-- XP and available rewards reflect edits immediately. A delivered reward remains recorded after correction and refresh.
-- Only the active semester can be edited through Parent Edit Mode. Reset requires confirmation.
+- Noam can record or correct study and grade outcomes in the active semester without a parent or Google account.
+- Opening the quest on a second authorized device, or refreshing an already open dashboard, shows saved achievements, derived XP, and reward history for the same semester.
+- A visitor without edit access cannot change cloud progress, even by sending a request directly. The audience for read-only cloud progress is still open.
+- A delivered reward remains recorded after a correction, refresh, or device change.
+- Existing progress can be brought forward without silently overwriting newer progress. Any reset that is carried forward requires explicit confirmation.
 - Exams, achievements and rewards render from valid JSON. Invalid configuration displays a useful diagnostic.
 - The local app runs, the automated checks pass, and the production bundle builds.
 
 ## Scope
 
-Phase 1 is single-family and browser-local. Authentication, Firebase, cloud sync, public deployment, configuration administration, multiple students, AI features, payments, and push notifications are outside Phase 1. Later phases may add parent authentication, synchronized progress, deployment, and configuration tools.
+The next release stays single-family. It replaces the paused Phase 2 approach of Firebase and Google-authenticated parent editing with direct student editing and simpler cross-device persistence. The storage service, how devices receive edit access, and whether cloud progress is visible to anyone with a read-only link are open design decisions. Configuration administration, multiple students, AI features, payments, and push notifications remain out of scope.
