@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { readConfig, validateConfig } from './data/config'
-import { deserializeProgress, serializeProgress, storageKey } from './progress-store'
+import { deserializeProgress, readLegacyBackup, readLegacyProgress, serializeLegacyBackup, serializeProgress, storageKey } from './progress-store'
 import { canClaim, changeAchievement, claimReward, emptyProgress, maximumXp, rewardLadder, totalXp, type Progress, type Semester } from './quest'
 
 const active: Semester = {
@@ -80,6 +80,30 @@ describe('rewards', () => {
 })
 
 describe('progress persistence', () => {
+  it('keeps the original browser data and round-trips a semester-tagged backup', () => {
+    const original = JSON.stringify({
+      exams: { [firstExam]: { excellent: 'achieved' }, removed: { studied: 'achieved' } },
+      claimed: [active.rewards[0].id, 'removed'],
+    })
+    const stored = new Map([[storageKey(active.id), original]])
+    const storage = { getItem: (key: string) => stored.get(key) ?? null }
+    const local = readLegacyProgress(storage, active)!
+    const restored = readLegacyBackup(serializeLegacyBackup(active.id, original), active)
+    expect(local).toEqual(restored)
+    expect(restored.progress).toEqual({
+      exams: { [firstExam]: { mastery: 'achieved', excellent: 'achieved' } },
+      claimed: [active.rewards[0].id],
+    })
+    expect(stored.get(storageKey(active.id))).toBe(original)
+    expect(readLegacyProgress(storage, historical)).toBeNull()
+  })
+
+  it('rejects invalid backup data and backups for another semester', () => {
+    expect(() => readLegacyBackup('{', active)).toThrow()
+    expect(() => readLegacyBackup(serializeLegacyBackup(historical.id, '{}'), active)).toThrow('Invalid semester backup')
+    expect(() => readLegacyBackup(serializeLegacyBackup(active.id, '{}'), active)).toThrow('Empty semester backup')
+  })
+
   it('starts a separate semester at zero and keeps old progress under its key', () => {
     const earned = earnFullExam(emptyProgress())
     const store = new Map([[storageKey(active.id), serializeProgress(earned)]])

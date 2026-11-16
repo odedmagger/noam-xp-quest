@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Help one fourth-grade student build exam preparation habits and celebrate progress. The student sees a Hebrew RTL dashboard. A parent records outcomes and physically delivers rewards. The expected scale is three to six exams per semester.
+Help one fourth-grade student build exam preparation habits and celebrate progress. Anyone with the dashboard URL can view its Hebrew RTL interface without signing in. Approved parents record outcomes and physically deliver rewards. The expected scale is three to six exams per semester.
 
 ## Semesters and configuration
 
@@ -26,7 +26,11 @@ The dashboard displays earned and maximum XP, the number of reward milestones re
 
 ## Editing and usability
 
-The active semester opens in student view. Parent Edit Mode enables status changes, reward delivery and a confirmation-protected reset limited to the active semester. Changes save automatically and survive refreshes on the same browser origin. The mode is a prototype convenience without authentication.
+The active semester opens in student view. Visitors can view statuses, XP, rewards and history without starting authentication. Choosing Parent Mode offers Google Sign-In when needed. Editing requires an explicitly approved Google account, and a signed-in account without approval continues in read-only mode. Parent sessions persist where supported, with a sign-out action.
+
+Approved parents can change statuses, record reward delivery and confirm a reset in the active semester. Historical semesters remain read-only except for importing legacy data into an empty cloud record. Edits save to the cloud automatically and display saving, saved or error feedback in Parent Mode. The dashboard waits for the first confirmed cloud snapshot and shows connection issues when progress cannot be refreshed.
+
+Firestore is the source of truth for each semester. Updates appear across open browsers without a refresh. A new semester starts at zero XP and earlier progress remains available. Local prototype data can be imported with an approved parent's confirmation only when the semester has no cloud record. Conflicts leave existing cloud and local data intact, and parents can keep a backup for comparison. The original copy is retained after a successful import.
 
 The interface uses Hebrew RTL, readable touch-friendly controls, keyboard access, clear focus, distinct labels and icons for statuses, and reduced-motion support. The original visual direction is a restrained game dashboard with navy panels, blue and purple accents, and gold XP highlights. The exam table fits typical iPad widths.
 
@@ -35,10 +39,12 @@ The interface uses Hebrew RTL, readable touch-friendly controls, keyboard access
 - A new semester is empty, and switching back to an older semester shows its recorded XP and claims.
 - Setting excellent also sets mastery. Revoking mastery revokes excellent while preserving study status.
 - XP and available rewards reflect edits immediately. A delivered reward remains recorded after correction and refresh.
-- Only the active semester can be edited through Parent Edit Mode. Reset requires confirmation.
+- The public dashboard opens without signing in. Only approved Google accounts can edit the active semester, and reset requires confirmation.
+- Confirmed changes reach another open browser in real time. Losing connectivity never substitutes legacy local data for cloud progress.
+- An authorized import populates an empty semester once and preserves the source. An existing cloud record blocks import.
 - Exams, achievements and rewards render from valid JSON. Invalid configuration displays a useful diagnostic.
 - The local app runs, the automated checks pass, and the production bundle builds.
 
 ## Scope
 
-Phase 1 is single-family and browser-local. Authentication, Firebase, cloud sync, public deployment, configuration administration, multiple students, AI features, payments, and push notifications are outside Phase 1. Later phases may add parent authentication, synchronized progress, deployment, and configuration tools.
+Phase 2 supports one family, a public read-only dashboard, and cloud-synchronized parent editing with a target operating cost of $0 under normal family usage. The dashboard contains only the information needed to track exams and rewards. Configuration administration, multiple students, AI features, payments, and push notifications are outside scope.

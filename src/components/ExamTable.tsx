@@ -8,10 +8,11 @@ const statuses = {
   failed: { label: 'לא הושג', icon: X },
 }
 
-export function ExamTable({ semester, progress, editable, onChange }: {
+export function ExamTable({ semester, progress, editable, saving, onChange }: {
   semester: Semester
   progress: Progress
   editable: boolean
+  saving: boolean
   onChange: (examId: string, achievementId: string, status: Status) => void
 }) {
   return <section className="panel exams-panel" aria-labelledby="exams-title">
@@ -46,7 +47,10 @@ export function ExamTable({ semester, progress, editable, onChange }: {
                 <span className="status-content" key={status} aria-hidden="true">{content}</span>
                 <ChevronDown size={12} aria-hidden="true" />
                 <select value={status} aria-label={[exam.subject, exam.title, item.title].filter(Boolean).join(' – ')}
-                  onChange={event => onChange(exam.id, item.id, event.target.value as Status)}>
+                  aria-disabled={saving}
+                  onChange={event => {
+                    if (!saving) onChange(exam.id, item.id, event.target.value as Status)
+                  }}>
                   {(Object.keys(statuses) as Status[]).map(option =>
                     <option value={option} key={option}>{statuses[option].label}</option>)}
                 </select>

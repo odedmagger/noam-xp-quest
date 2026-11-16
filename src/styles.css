@@ -28,7 +28,7 @@ svg { flex-shrink: 0; }
 .semester-control > svg { color: #aab4da; pointer-events: none; }
 .semester-control select { appearance: none; background: transparent; min-height: 44px; padding-inline: 27px 27px; margin-inline: -24px; z-index: 1; max-width: 230px; }
 option { background: #1b2138; color: #eef1ff; }
-.parent-toggle:hover, .parent-toggle[aria-pressed="true"] { border-color: #9385e4; background: #332a55; }
+.parent-toggle:hover, .parent-toggle[aria-expanded="true"] { border-color: #9385e4; background: #332a55; }
 .main-content { padding-block: 35px 50px; }
 .welcome { margin-bottom: 25px; }
 .eyebrow { @apply flex items-center gap-2; color: #bdb4ff; font-size: .85rem; font-weight: 740; }
@@ -159,3 +159,13 @@ td.total-cell.scored { color: var(--gold); }
 @media (prefers-reduced-motion: reduce) {
   .status-content, .reward-list li.unlocked { animation: none; }
 }
+.parent-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.parent-banner > span { display: inline-flex; align-items: center; gap: 7px; }
+.parent-banner button, .backup-picker { min-height: 44px; border: 1px solid #7665a4; border-radius: 8px; padding: 5px 11px; color: #eeeaff; background: #332a55; }
+.parent-banner button:hover:enabled { background: #453773; }
+.migration { display: block; padding-block: 0; }
+.migration summary { cursor: pointer; min-height: 44px; padding-block: 11px; }
+.migration p, .migration .parent-banner { margin-block: 0 9px; }
+.migration .parent-banner { justify-content: flex-start; }
+.backup-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.backup-picker input { max-width: 100%; }
