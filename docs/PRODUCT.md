@@ -4,6 +4,8 @@
 
 Noam's XP Quest helps one fourth-grade student build exam preparation habits and celebrate progress. Noam records his own achievements in a Hebrew RTL dashboard designed for desktop and iPad. The visual design remains a restrained game dashboard with navy panels, blue and purple accents, and gold XP highlights.
 
+On wide screens, the dashboard uses a centered content area up to 1,248 CSS pixels wide with responsive gutters. The XP and exams column takes about 70% of the available grid width, and the achievements panel takes about 30%. At widths of 880 CSS pixels and below, the panels stack, with a full-width exam table on iPad portrait. Ordinary dashboard labels and details use 14–16 px at the default text size, with 16–18 px for important labels and values. Interactive exam and reward controls have at least a 44 px touch target.
+
 ### Semesters and configuration
 
 Each semester has a stable ID, a Hebrew name, optional dates, exams, a study achievement, a grade definition and a reward ladder. JSON defines configuration and exactly one active semester. A new semester starts at zero XP. Historical semesters remain visible and read-only. Dates are informational. There is no configuration administration UI.
