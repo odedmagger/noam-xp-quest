@@ -26,28 +26,28 @@
           "id": "math",
           "subject": "מתמטיקה",
           "title": "חיבור וחיסור עד 10,000",
-          "date": "2026-11-19",
+          "date": "2026-12-24",
           "icon": "math"
         },
         {
           "id": "english",
           "subject": "אנגלית",
           "title": "אוצר מילים והבנת הנקרא",
-          "date": "2026-11-25",
+          "date": "2026-12-02",
           "icon": "language"
         },
         {
           "id": "science",
           "subject": "מדעים",
           "title": "חומרים ותכונותיהם",
-          "date": "2026-12-02",
+          "date": "2026-11-03",
           "icon": "science"
         },
         {
           "id": "hebrew",
           "subject": "עברית",
           "title": "הבנת הנקרא",
-          "date": "2026-12-09",
+          "date": "2026-11-16",
           "icon": "book"
         }
       ],
