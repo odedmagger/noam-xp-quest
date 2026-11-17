@@ -28,7 +28,11 @@ Exam XP is study XP plus grade XP, up to 25. Semester XP is the sum across that 
 
 ### Levels and achievements
 
-The dashboard subtitle is **לומדים למבחן, צוברים XP, זוכים!**. The dashboard shows earned and maximum XP, the current **רמה**, and progress toward the next **הישג**. The **מסלול ההישגים** panel lists the achievements that unlock when XP meets the configured thresholds. Noam can mark an unlocked achievement as claimed from the dashboard. This does not spend XP. A claim stays recorded after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
+The dashboard subtitle is **לומדים למבחן, צוברים XP, זוכים!**. The XP header focuses on the next **רמה**. Its bar and X / Y XP count measure points earned since the last level threshold against points needed for the next one. The header separately shows total semester XP and the current level badge.
+
+When a saved change reaches a level, the current bar fills, a short celebration appears in a reserved area, and the bar resets for the next level with any extra XP carried over. Several thresholds reached in one save play in order, with thresholds at the same XP combined into one celebration. Opening or switching semesters shows the saved level directly. A correction that lowers the level updates the header without celebration. Reduced-motion users see the level-up message without motion. After the highest level, the bar stays full and the header shows completion.
+
+The **מסלול ההישגים** panel lists the achievements that unlock when XP meets the configured thresholds. Noam can mark an unlocked achievement as claimed from the dashboard. This does not spend XP. A claim stays recorded after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
 
 ### Persistence and access
 

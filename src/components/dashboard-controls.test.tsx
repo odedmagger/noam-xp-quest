@@ -4,6 +4,8 @@ import { readConfig } from '../data/config'
 import { emptyProgress, rewardLadder, type Progress } from '../quest'
 import { ExamTable } from './ExamTable'
 import { RewardLadder } from './RewardLadder'
+import { XpHeader } from './XpHeader'
+import { advanceLevel, retargetLevel, startLevelProgress } from './level-progress'
 
 const config = readConfig()
 const semester = config.semesters.find(item => item.id === config.activeSemesterId)!
@@ -15,6 +17,38 @@ function renderExams(outcomes: Progress, editable = true, saving = false) {
 }
 
 describe('student dashboard controls', () => {
+  it('shows next-level XP separately from the semester total and the saved level', () => {
+    const { ordered } = rewardLadder(semester, 35)
+    const markup = renderToStaticMarkup(<XpHeader xp={45} confirmedXp={35} maxXp={100} levels={ordered} />)
+    expect(markup).toContain('aria-valuenow="40"')
+    expect(markup).toContain('aria-valuetext="10 מתוך 25 נקודות לרמה 2"')
+    expect(markup).toContain('<strong>45</strong> / 100 XP')
+    expect(markup).toContain('רמה נוכחית 1')
+    expect(markup).not.toContain('עלית לרמה')
+  })
+
+  it('shows a full bar after the last level and no bar with an empty ladder', () => {
+    const { ordered } = rewardLadder(semester, 100)
+    const complete = renderToStaticMarkup(<XpHeader xp={100} confirmedXp={100} maxXp={100} levels={ordered} />)
+    expect(complete).toContain('aria-valuenow="100"')
+    expect(complete).toContain('הגעת לרמה הגבוהה ביותר!')
+    const empty = renderToStaticMarkup(<XpHeader xp={0} confirmedXp={0} maxXp={0} levels={[]} />)
+    expect(empty).not.toContain('role="progressbar"')
+    expect(empty).toContain('עדיין לא הוגדרו רמות.')
+  })
+
+  it('fills before celebrating, then resets to the next threshold and stops on a correction', () => {
+    const first = retargetLevel(startLevelProgress(0), 3)
+    expect(first).toMatchObject({ level: 0, phase: 'fill', resetBar: false })
+    const celebrating = advanceLevel(first, 1)
+    expect(celebrating).toMatchObject({ level: 0, phase: 'celebrate' })
+    const next = advanceLevel(celebrating, 1)
+    expect(next).toMatchObject({ level: 1, phase: 'fill', target: 3, resetBar: true })
+    const tiedCelebration = advanceLevel(next, 3)
+    expect(advanceLevel(tiedCelebration, 3)).toEqual({ level: 3, target: 3, phase: 'progress', resetBar: true })
+    expect(retargetLevel(next, 1)).toEqual(startLevelProgress(1))
+  })
+
   it('shows exams by ascending date and keeps tied and undated exams in configuration order', () => {
     const exams = [
       { id: 'no-date-first', subject: 'Undated first' },

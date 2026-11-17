@@ -1,33 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { CalendarDays, ChevronDown, CircleAlert, Swords, Zap } from 'lucide-react'
-import { animate, motion, useReducedMotion } from 'motion/react'
+import { CalendarDays, ChevronDown, CircleAlert, Swords } from 'lucide-react'
 import { readConfig } from './data/config'
 import { ExamTable } from './components/ExamTable'
 import { RewardLadder } from './components/RewardLadder'
 import { LegacyMigration } from './components/LegacyMigration'
+import { XpHeader } from './components/XpHeader'
 import { getCloudServices } from './cloud/firebase'
 import { ProgressConflict, type CloudProgress, type ProgressStore } from './cloud-progress'
 import { changeGrade, changeStudy, claimReward, maximumXp, rewardLadder, totalXp, type Config, type Progress, type Semester } from './quest'
-
-function XpCount({ xp }: { xp: number }) {
-  const [display, setDisplay] = useState(xp)
-  const current = useRef(xp)
-  const reducedMotion = useReducedMotion()
-
-  useEffect(() => {
-    if (reducedMotion || current.current === xp) return
-    const animation = animate(current.current, xp, {
-      duration: 0.35,
-      onUpdate: value => {
-        current.current = value
-        setDisplay(Math.round(value))
-      },
-    })
-    return () => animation.stop()
-  }, [xp, reducedMotion])
-
-  return <>{reducedMotion ? xp : display}</>
-}
 
 export default function App() {
   const [setup] = useState(() => {
@@ -94,7 +74,6 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [saveState, setSaveState] = useState<SaveState>({ kind: 'idle' })
   const saving = useRef(false)
-  const reducedMotion = useReducedMotion()
 
   useEffect(() => {
     let current = true
@@ -137,6 +116,7 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
   const retry = saveState.kind === 'error' ? saveState.retry : undefined
   const editable = active && !!snapshot
   const xp = progress ? totalXp(progress, semester) : 0
+  const confirmedXp = snapshot ? totalXp(snapshot.progress, semester) : 0
   const max = maximumXp(semester)
   const ladder = rewardLadder(semester, xp)
 
@@ -159,27 +139,7 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
     {progress && <div className="dashboard">
       <div className="main-column">
 
-        <section className="hero" aria-labelledby="xp-title">
-          <div className="hero-art" aria-hidden="true">
-            <div className="art-grid" />
-            <span className="spark spark-top">✦</span><span className="spark spark-bottom">✦</span>
-            <div className="emblem-outline"><div className="emblem"><Zap size={63} fill="currentColor" strokeWidth={1.4} /></div></div>
-          </div>
-          <div className="hero-content">
-            <div className="hero-label"><h2 id="xp-title"><Zap size={15} fill="currentColor" /> נקודות בסמסטר</h2><span className="milestone">רמה {ladder.milestone} מתוך {ladder.ordered.length}</span></div>
-            <div className="xp-value" dir="ltr">
-              <strong aria-hidden="true"><XpCount xp={xp} /></strong><span aria-hidden="true"> / {max} XP</span>
-              <span className="sr-only" aria-live="polite">{xp} מתוך {max} נקודות</span>
-            </div>
-            <div className="progress-details">
-              <span>{ladder.next ? 'ההישג הבא · ' + ladder.next.title : ladder.ordered.length ? 'הגעת לרמה הגבוהה ביותר!' : 'אין הישגים במסלול הזה'}</span>
-              {ladder.next && <bdi>{ladder.next.xp - xp} XP להישג הבא</bdi>}
-            </div>
-            <div className="xp-track" role="progressbar" aria-label="התקדמות להישג הבא" aria-valuenow={Math.round(ladder.percentage)}>
-              <motion.div initial={false} animate={{ width: ladder.percentage + '%' }} transition={{ duration: reducedMotion ? 0 : 0.4 }} />
-            </div>
-          </div>
-        </section>
+        <XpHeader xp={xp} confirmedXp={confirmedXp} maxXp={max} levels={ladder.ordered} />
         <ExamTable semester={semester} progress={progress} editable={editable} saving={isSaving}
           onStudyChange={(exam, status) => {
             void save({
