@@ -49,7 +49,7 @@ npx firebase deploy --only firestore:rules --project YOUR_PROJECT_ID
 
 Verify public reads and active-semester writes, and confirm all other paths are denied. Publishing the approved release to `main` triggers the [Firebase Hosting workflow](.github/workflows/firebase-hosting.yml). It runs all checks, signs in with a short-lived GitHub identity, and checks that the live rules match the commit before it builds and publishes. Rules or migrations need separate approval and execution. If the rules check fails, the current hosted version stays live. Rerun the workflow after the approved rules have propagated.
 
-After release, verify the public URL and try an approved test edit and refresh on a second device. Keep test edits out of existing student progress. This student-editing revision has no verified hosted URL yet.
+Production runs on [Firebase Hosting](https://noam-xp-quest.web.app/). After a release, open the dashboard and verify the active semester loads. Test edits and cross-device refreshes against the emulator to keep test records out of student progress.
 
 ## Configure a semester
 
