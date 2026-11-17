@@ -14,7 +14,7 @@ export function RewardLadder({ ladder, progress, xp, editable, saving, onClaim }
   return <aside className="panel reward-panel" aria-labelledby="rewards-title">
     <div className="section-heading">
       <span className="section-icon gold"><Trophy size={21} /></span>
-      <div><h2 id="rewards-title">מסלול הפרסים</h2><p>{ladder.milestone} מתוך {ladder.ordered.length} אבני דרך הושגו</p></div>
+      <div><h2 id="rewards-title">מסלול ההישגים</h2><p>{ladder.milestone} מתוך {ladder.ordered.length} רמות הושגו</p></div>
     </div>
     {ladder.ordered.length ? <ol className="reward-list">
       {ladder.ordered.map(reward => {
@@ -37,7 +37,7 @@ export function RewardLadder({ ladder, progress, xp, editable, saving, onClaim }
           </div>
         </li>
       })}
-    </ol> : <p className="empty">עדיין לא הוגדרו פרסים.</p>}
+    </ol> : <p className="empty">עדיין לא הוגדרו הישגים.</p>}
     <p className="reward-footer">מסלול חדש מתחיל בכל סמסטר.</p>
   </aside>
 }

@@ -69,7 +69,7 @@ export function LegacyMigration({ semester, snapshot, importAllowed, enabled, on
     </div>
     {error && <p role="alert">{error}</p>}
     {confirm && candidate && empty && <div className="action-banner" role="group" aria-label="אישור ייבוא">
-      <span>לייבא את ההישגים והפרסים של {semester.name}?</span>
+      <span>לייבא את נתוני המבחנים ומסלול ההישגים של {semester.name}?</span>
       <button type="button" onClick={() => setConfirm(false)}>ביטול</button>
       <button type="button" disabled={!canImport} onClick={async () => {
         setConfirm(false)

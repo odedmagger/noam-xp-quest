@@ -10,7 +10,7 @@ Each semester has a stable ID, a Hebrew name, optional dates, exams, a study ach
 
 ### Exams and XP
 
-The exam table shows the subject, optional exam name and date, study achievement, grade, and earned XP. **למדתי היטב** awards 10 XP when achieved. Pending and failed award zero. The study achievement is independent of the grade.
+The exam table shows the subject, optional exam name and date, study achievement, grade, and earned XP. Dated exams appear from earliest to latest, followed by undated exams. Exams with the same date and undated exams keep their configured order. **למדתי היטב** awards 10 XP when achieved. Pending and failed award zero. The study achievement is independent of the grade.
 
 The **ציון** field offers four grades and an unset option:
 
@@ -26,9 +26,9 @@ The grade column header shows the gold subtitle **Up to 15 XP**. The selected gr
 
 Exam XP is study XP plus grade XP, up to 25. Semester XP is the sum across that semester’s exams. Four exams allow 100 XP and six allow 150 XP.
 
-### Rewards
+### Levels and achievements
 
-The dashboard shows earned and maximum XP, milestones reached, and progress toward the next reward. Rewards unlock when XP meets the configured threshold. Noam can mark an unlocked reward as claimed from the dashboard. This does not spend XP. A reward remains recorded as claimed after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
+The dashboard subtitle is **לומדים למבחן, צוברים XP, זוכים!**. The dashboard shows earned and maximum XP, the current **רמה**, and progress toward the next **הישג**. The **מסלול ההישגים** panel lists the achievements that unlock when XP meets the configured thresholds. Noam can mark an unlocked achievement as claimed from the dashboard. This does not spend XP. A claim stays recorded after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
 
 ### Persistence and access
 

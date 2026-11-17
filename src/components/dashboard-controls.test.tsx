@@ -15,6 +15,21 @@ function renderExams(outcomes: Progress, editable = true, saving = false) {
 }
 
 describe('student dashboard controls', () => {
+  it('shows exams by ascending date and keeps tied and undated exams in configuration order', () => {
+    const exams = [
+      { id: 'no-date-first', subject: 'Undated first' },
+      { id: 'later', subject: 'Later', date: '2027-01-01' },
+      { id: 'early-first', subject: 'Early first', date: '2026-12-31' },
+      { id: 'no-date-second', subject: 'Undated second' },
+      { id: 'early-second', subject: 'Early second', date: '2026-12-31' },
+    ]
+    const markup = renderToStaticMarkup(<ExamTable semester={{ ...semester, exams }} progress={progress}
+      editable={false} saving={false} {...callbacks} />)
+    const subjects = [...markup.matchAll(/<strong>([^<]+)<\/strong>/g)].map(match => match[1])
+    expect(subjects).toEqual(['Early first', 'Early second', 'Later', 'Undated first', 'Undated second'])
+    expect(exams.map(exam => exam.id)).toEqual(['no-date-first', 'later', 'early-first', 'no-date-second', 'early-second'])
+  })
+
   it('offers two controls per exam with all study and grade options available', () => {
     const active = renderExams(progress)
     const historical = renderExams(progress, false)
@@ -49,7 +64,10 @@ describe('student dashboard controls', () => {
     const render = (xp: number, editable: boolean, claimed: string[]) => renderToStaticMarkup(<RewardLadder
       ladder={rewardLadder(semester, xp)} progress={{ ...progress, claimed }} xp={xp}
       editable={editable} saving={false} onClaim={vi.fn()} />)
-    expect(render(0, true, [])).not.toContain('claim-button')
+    const initial = render(0, true, [])
+    expect(initial).toContain('מסלול ההישגים')
+    expect(initial).toContain('רמות הושגו')
+    expect(initial).not.toContain('claim-button')
     expect(render(reward.xp, true, [])).toContain('claim-button')
     expect(render(reward.xp, false, [])).not.toContain('claim-button')
     const delivered = render(0, true, [reward.id])

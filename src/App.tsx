@@ -71,7 +71,7 @@ function Dashboard({ config, store }: { config: Config; store: ProgressStore }) 
       <div className="welcome">
         <div className="eyebrow"><span /> {active ? 'לוח התקדמות' : 'היסטוריית סמסטרים'}</div>
         <h1>המסע של נועם<span>.</span></h1>
-        <p>כל הישג במבחן מקרב אותך לפרס הבא.</p>
+        <p>לומדים למבחן, צוברים XP, זוכים!</p>
       </div>
       <Quest key={semester.id} semester={semester} active={active} store={store} />
     </main>
@@ -121,7 +121,7 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
         setSnapshot(error.current)
         const message = error.reason === 'existing-progress'
           ? 'כבר יש נתונים בענן. העותק המקומי נשמר ואפשר להוריד גיבוי.'
-          : 'הפרס כבר לא זמין לפי הנקודות העדכניות.'
+          : 'ההישג כבר לא זמין לפי הנקודות העדכניות.'
         setSaveState({ kind: 'error', message })
       } else {
         setSaveState({ kind: 'error', message: 'השינוי לא נשמר. אפשר לבדוק את החיבור ולנסות שוב.', retry: action })
@@ -166,16 +166,16 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
             <div className="emblem-outline"><div className="emblem"><Zap size={63} fill="currentColor" strokeWidth={1.4} /></div></div>
           </div>
           <div className="hero-content">
-            <div className="hero-label"><h2 id="xp-title"><Zap size={15} fill="currentColor" /> נקודות בסמסטר</h2><span className="milestone">אבן דרך {ladder.milestone} מתוך {ladder.ordered.length}</span></div>
+            <div className="hero-label"><h2 id="xp-title"><Zap size={15} fill="currentColor" /> נקודות בסמסטר</h2><span className="milestone">רמה {ladder.milestone} מתוך {ladder.ordered.length}</span></div>
             <div className="xp-value" dir="ltr">
               <strong aria-hidden="true"><XpCount xp={xp} /></strong><span aria-hidden="true"> / {max} XP</span>
               <span className="sr-only" aria-live="polite">{xp} מתוך {max} נקודות</span>
             </div>
             <div className="progress-details">
-              <span>{ladder.next ? 'הבא בתור · ' + ladder.next.title : ladder.ordered.length ? 'הגעת לכל אבני הדרך!' : 'אין פרסים במסלול הזה'}</span>
-              {ladder.next && <bdi>{ladder.next.xp - xp} XP לפרס</bdi>}
+              <span>{ladder.next ? 'ההישג הבא · ' + ladder.next.title : ladder.ordered.length ? 'הגעת לרמה הגבוהה ביותר!' : 'אין הישגים במסלול הזה'}</span>
+              {ladder.next && <bdi>{ladder.next.xp - xp} XP להישג הבא</bdi>}
             </div>
-            <div className="xp-track" role="progressbar" aria-label="התקדמות לפרס הבא" aria-valuenow={Math.round(ladder.percentage)}>
+            <div className="xp-track" role="progressbar" aria-label="התקדמות להישג הבא" aria-valuenow={Math.round(ladder.percentage)}>
               <motion.div initial={false} animate={{ width: ladder.percentage + '%' }} transition={{ duration: reducedMotion ? 0 : 0.4 }} />
             </div>
           </div>

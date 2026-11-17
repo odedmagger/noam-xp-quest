@@ -95,7 +95,7 @@ export function validateConfig(value: unknown): Config {
     const maximum = maximumXp(semester)
     if (!Number.isSafeInteger(maximum)) fail(path, 'סכום נקודות גדול מדי')
     for (const reward of rewards) {
-      if (reward.xp > maximum) fail(path + '.rewards.' + reward.id, 'רף הפרס גבוה מהמקסימום: ' + maximum)
+      if (reward.xp > maximum) fail(path + '.rewards.' + reward.id, 'רף ההישג גבוה מהמקסימום: ' + maximum)
     }
     return semester
   })

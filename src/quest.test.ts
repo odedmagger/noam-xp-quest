@@ -9,7 +9,7 @@ const active: Semester = {
   exams: ['math', 'english', 'science', 'hebrew'].map(id => ({ id, subject: id })),
   study: { id: 'studied', title: 'למדתי היטב', xp: 10 },
   grade: readConfig().semesters[0].grade,
-  rewards: [25, 50, 75, 100].map(xp => ({ id: 'reward-' + xp, title: 'פרס', xp })),
+  rewards: [25, 50, 75, 100].map(xp => ({ id: 'reward-' + xp, title: 'הישג', xp })),
 }
 const historical = { ...active, id: 'test-historical' }
 const semesters = [active, historical]
@@ -168,7 +168,7 @@ describe('configuration validation', () => {
   })
 
   it('rejects impossible rewards and missing active semesters', () => {
-    expect(() => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, exams: [] }] })).toThrow('רף הפרס גבוה')
+    expect(() => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, exams: [] }] })).toThrow('רף ההישג גבוה')
     expect(() => validateConfig({ activeSemesterId: 'missing', semesters })).toThrow('הסמסטר הפעיל אינו קיים')
   })
 })

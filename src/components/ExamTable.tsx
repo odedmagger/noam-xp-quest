@@ -17,19 +17,25 @@ export function ExamTable({ semester, progress, editable, saving, onStudyChange,
   onGradeChange: (examId: string, grade: Grade) => void
 }) {
   const { study, grade } = semester
+  const exams = [...semester.exams].sort((a, b) => {
+    if (a.date && b.date) return a.date.localeCompare(b.date)
+    if (a.date === b.date) return 0
+    return a.date ? -1 : 1
+  })
+
   return <section className="panel exams-panel" aria-labelledby="exams-title">
     <div className="section-heading">
       <span className="section-icon blue"><ListChecks size={21} /></span>
       <div><h2 id="exams-title">משימות המבחנים</h2><p>למידה וציון בכל מבחן</p></div>
     </div>
-    {semester.exams.length ? <table aria-label="הישגים במבחנים">
+    {exams.length ? <table aria-label="הישגים במבחנים">
       <thead><tr>
         <th scope="col">מבחן</th>
         <th scope="col">{study.title}<span className="column-xp" dir="ltr">+{study.xp} XP</span></th>
         <th scope="col">{grade.title}<span className="column-xp" dir="ltr" lang="en">Up to {maximumGradeXp(grade)} XP</span></th>
         <th scope="col" className="total-cell">סה״כ</th>
       </tr></thead>
-      <tbody>{semester.exams.map(exam => {
+      <tbody>{exams.map(exam => {
         const Icon = examIcons[exam.icon as keyof typeof examIcons] ?? BookOpen
         const score = examXp(progress, semester, exam.id)
         const status = progress.exams[exam.id]?.study ?? 'pending'
