@@ -1,5 +1,5 @@
 import { BookOpen, Check, ChevronDown, Circle, FlaskConical, Languages, ListChecks, Medal, Sigma, Target, X } from 'lucide-react'
-import { examXp, isGrade, isStatus, maximumExamXp, type Grade, type Progress, type Semester, type Status } from '../quest'
+import { examXp, isGrade, isStatus, maximumExamXp, maximumGradeXp, type Grade, type Progress, type Semester, type Status } from '../quest'
 
 const examIcons = { math: Sigma, language: Languages, science: FlaskConical, book: BookOpen }
 const statuses = {
@@ -26,7 +26,7 @@ export function ExamTable({ semester, progress, editable, saving, onStudyChange,
       <thead><tr>
         <th scope="col">מבחן</th>
         <th scope="col">{study.title}<span className="column-xp" dir="ltr">+{study.xp} XP</span></th>
-        <th scope="col">{grade.title}</th>
+        <th scope="col">{grade.title}<span className="column-xp" dir="ltr" lang="en">Up to {maximumGradeXp(grade)} XP</span></th>
         <th scope="col" className="total-cell">סה״כ</th>
       </tr></thead>
       <tbody>{semester.exams.map(exam => {

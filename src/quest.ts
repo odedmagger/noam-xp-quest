@@ -43,8 +43,12 @@ export function isGrade(value: unknown): value is Grade {
   return value === 'pending' || isGradeId(value)
 }
 
+export function maximumGradeXp(grade: Semester['grade']) {
+  return Math.max(...grade.options.map(option => option.xp))
+}
+
 export function maximumExamXp(semester: Semester) {
-  return semester.study.xp + Math.max(...semester.grade.options.map(option => option.xp))
+  return semester.study.xp + maximumGradeXp(semester.grade)
 }
 
 export function maximumXp(semester: Semester) {

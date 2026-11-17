@@ -23,11 +23,12 @@ describe('student dashboard controls', () => {
     for (const [index, select] of selects.entries()) {
       const values = [...select.matchAll(/<option value="([^"]+)"/g)].map(match => match[1])
       expect(values).toEqual(index % 2 ? ['pending', ...semester.grade.options.map(option => option.id)] : ['pending', 'achieved', 'failed'])
+      expect(select).toMatch(/<option value="pending"[^>]*>ממתין<\/option>/)
     }
     expect(historical).not.toContain('<select')
-    expect(historical).toContain('ממתין')
-    expect(historical).toContain('עדיין אין')
+    expect(historical).toContain('<span class="status grade-control"><span>ממתין</span></span>')
     expect(historical).not.toContain('grade-medal')
+    expect(active).toContain('ציון<span class="column-xp" dir="ltr" lang="en">Up to 15 XP</span>')
   })
 
   it.each(semester.grade.options)('shows the $medal medal alongside the grade $title', option => {

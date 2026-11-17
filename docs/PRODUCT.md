@@ -20,9 +20,9 @@ The **ציון** field offers four grades and an unset option:
 | שולט היטב | 10 | Silver medal |
 | שולט | 0 | Bronze medal |
 | שולט חלקית | 0 | Bronze medal |
-| עדיין אין | 0 | Neutral placeholder with no medal |
+| ממתין | 0 | Neutral placeholder with no medal |
 
-The selected grade always appears as text. Noam can set, correct or clear a grade directly in the active exam table without signing in. Each grade is immediately available. The study selector retains its pending, achieved and failed options. Both controls work with touch and keyboard.
+The grade column header shows the gold subtitle **Up to 15 XP**. The selected grade always appears as text. Noam can set, correct or clear a grade directly in the active exam table without signing in. Each grade is immediately available. The study selector retains its pending, achieved and failed options. Both controls work with touch and keyboard.
 
 Exam XP is study XP plus grade XP, up to 25. Semester XP is the sum across that semester’s exams. Four exams allow 100 XP and six allow 150 XP.
 

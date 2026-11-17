@@ -13,7 +13,7 @@
       },
       "grade": {
         "title": "ציון",
-        "pendingTitle": "עדיין אין",
+        "pendingTitle": "ממתין",
         "options": [
           { "id": "excellent", "title": "מצטיין", "xp": 15, "medal": "gold" },
           { "id": "mastery", "title": "שולט היטב", "xp": 10, "medal": "silver" },
@@ -118,7 +118,7 @@
       },
       "grade": {
         "title": "ציון",
-        "pendingTitle": "עדיין אין",
+        "pendingTitle": "ממתין",
         "options": [
           { "id": "excellent", "title": "מצטיין", "xp": 15, "medal": "gold" },
           { "id": "mastery", "title": "שולט היטב", "xp": 10, "medal": "silver" },
