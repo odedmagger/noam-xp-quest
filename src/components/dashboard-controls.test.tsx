@@ -24,6 +24,7 @@ describe('student dashboard controls', () => {
     expect(markup).toContain('aria-valuetext="10 מתוך 25 נקודות לרמה 2"')
     expect(markup).toContain('<strong>45</strong> / 100 XP')
     expect(markup).toContain('רמה נוכחית 1')
+    expect(markup).toContain('<div class="level-feedback" role="status"></div>')
     expect(markup).not.toContain('עלית לרמה')
   })
 

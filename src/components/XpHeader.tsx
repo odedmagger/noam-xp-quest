@@ -80,8 +80,7 @@ export function XpHeader({ xp, confirmedXp, maxXp, levels }: {
       </>}
       <div className="level-feedback" role="status">
         {celebrating ? <span className="level-celebration"><Sparkles size={16} aria-hidden="true" /> עלית לרמה {reachedLevel}!</span>
-          : next && phase === 'progress' ? <span>עוד <bdi dir="ltr">{goal - earned} XP</bdi> לרמה {reachedLevel}</span>
-            : levels.length === 0 ? <span>עדיין לא הוגדרו רמות.</span> : null}
+          : levels.length === 0 ? <span>עדיין לא הוגדרו רמות.</span> : null}
       </div>
     </div>
     <div className={'hero-level' + (celebrating ? ' celebrating' : '')} aria-label={'רמה נוכחית ' + displayedLevel}>
