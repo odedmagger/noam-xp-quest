@@ -87,6 +87,11 @@ tbody th { padding-inline-start: 17px; text-align: start; }
 .status-content { display: flex; align-items: center; gap: 4px; animation: feedback .23s ease-out; }
 .status.achieved { background: #183c36; border-color: #2d6155; color: #a8efc9; }
 .status.failed { background: #43283c; border-color: #744059; color: #ffc0cb; }
+.grade-control { padding-inline: 8px; }
+.grade-medal { flex-shrink: 0; }
+.grade-medal.gold { color: var(--gold); }
+.grade-medal.silver { color: #d0daee; }
+.grade-medal.bronze { color: #e4ab86; }
 .total-cell { width: 11%; font-weight: 760; }
 td.total-cell { color: var(--muted); font-size: .75rem; white-space: nowrap; }
 td.total-cell.scored { color: var(--gold); }

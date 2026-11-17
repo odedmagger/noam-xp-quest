@@ -8,12 +8,17 @@ const { activeSemesterId, semesters } = JSON.parse(readFileSync(configPath, 'utf
 const active = semesters.find(semester => semester.id === activeSemesterId)
 if (!active) throw new Error('The active semester must be defined in semesters.json.')
 
-const statusKeys = active.exams.flatMap(exam => active.achievements.map(item => exam.id + ':' + item.id))
+const examIds = active.exams.map(exam => exam.id)
+const studyKeys = examIds.map(id => id + ':' + active.study.id)
+const legacyStatusKeys = [...studyKeys, ...examIds.flatMap(id => [id + ':mastery', id + ':excellent'])]
 const content = [
   '    // BEGIN GENERATED SEMESTER CONFIG',
   '    function knownSemester(id) { return id in ' + JSON.stringify(semesters.map(semester => semester.id)) + '; }',
   '    function activeSemester(id) { return id == ' + JSON.stringify(activeSemesterId) + '; }',
-  '    function activeStatusKeys() { return ' + JSON.stringify(statusKeys) + '; }',
+  '    function activeStudyKeys() { return ' + JSON.stringify(studyKeys) + '; }',
+  '    function legacyStatusKeys() { return ' + JSON.stringify(legacyStatusKeys) + '; }',
+  '    function activeGradeKeys() { return ' + JSON.stringify(examIds) + '; }',
+  '    function gradeValues() { return ' + JSON.stringify(['pending', ...active.grade.options.map(option => option.id)]) + '; }',
   '    function activeRewardKeys() { return ' + JSON.stringify(active.rewards.map(reward => reward.id)) + '; }',
   '    // END GENERATED SEMESTER CONFIG',
 ]

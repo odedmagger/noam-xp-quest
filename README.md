@@ -1,6 +1,6 @@
 # Noam's XP Quest
 
-A Hebrew RTL dashboard where Noam records his exam achievements directly and claims unlocked rewards. The app derives XP from status, with a separate score for each semester. The current release serves one student and opens without an account.
+A Hebrew RTL dashboard where Noam records study and grades directly and claims unlocked rewards. Exam XP combines study and grade XP, with a separate score for each semester. The current release serves one student and opens without an account.
 
 ## Run locally
 
@@ -53,16 +53,20 @@ Production runs on [Firebase Hosting](https://noam-xp-quest.web.app/). After a r
 
 ## Configure a semester
 
-Edit [src/data/semesters.json](src/data/semesters.json). Give a new semester a new stable ID, set its name, exams, achievements and rewards, and update `activeSemesterId`. Keep older entries and their IDs so history stays visible. New semester IDs start at zero XP. Optional dates use `YYYY-MM-DD`.
+Edit [src/data/semesters.json](src/data/semesters.json). Give a new semester a new stable ID, set its name, exams, study field, grade field and rewards, and update `activeSemesterId`. Keep older entries and their IDs so history stays visible. New semester IDs start at zero XP. Optional dates use `YYYY-MM-DD`.
 
 | Object | Required fields | Optional fields |
 | --- | --- | --- |
-| Semester | `id`, `name`, `exams`, `achievements`, `rewards` | `startDate`, `endDate` |
+| Semester | `id`, `name`, `exams`, `study`, `grade`, `rewards` | `startDate`, `endDate` |
 | Exam | `id`, `subject` | `title`, `date`, `icon` |
-| Achievement | `id`, `title`, positive integer `xp` | `requires` with another achievement ID |
+| Study | `id` (`studied`), `title`, `xp` (10) | |
+| Grade | `title`, `pendingTitle`, `options` | |
+| Grade option | `id`, `title`, `xp`, `medal` | |
 | Reward | `id`, `title`, positive integer `xp` threshold | `description`, `type`, `icon` |
 
-Use stable lowercase IDs containing letters, digits, hyphens or underscores, beginning with a letter or digit. IDs must be unique within each list. Each semester has exactly three achievements with acyclic dependencies. Reward thresholds must be reachable. After changing semester, exam, achievement or reward IDs, run `npm run rules:sync` and commit the generated rule section. `npm run rules:check` catches any mismatch. Publish matching rules and app configuration together when a semester changes.
+Use stable lowercase IDs containing letters, digits, hyphens or underscores, beginning with a letter or digit. IDs must be unique within each list. Use the four grade IDs `excellent` (15 XP, gold), `mastery` (10 XP, silver), `competent` (0 XP, bronze) and `partial` (0 XP, bronze). The unset state uses `pendingTitle` and awards zero. Reward thresholds must be reachable. After changing semester, exam or reward IDs, run `npm run rules:sync` and commit the generated rule section. `npm run rules:check` catches mismatches. Publish the compatible rules before releasing the matching app.
+
+See the [grade schema release and recovery procedure](docs/ARCHITECTURE.md#release-and-recovery-for-the-grade-schema) before promoting this change. Existing Firestore records load without a bulk migration.
 
 ## Import existing browser progress
 

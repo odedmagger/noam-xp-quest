@@ -6,24 +6,21 @@
       "name": "סמסטר א׳ · תשפ״ז",
       "startDate": "2026-09-01",
       "endDate": "2027-01-31",
-      "achievements": [
-        {
-          "id": "studied",
-          "title": "למדתי טוב למבחן",
-          "xp": 10
-        },
-        {
-          "id": "mastery",
-          "title": "השגתי ציון ״שולט היטב״ ומעלה",
-          "xp": 10
-        },
-        {
-          "id": "excellent",
-          "title": "השגתי ציון ״מצטיין״",
-          "xp": 5,
-          "requires": "mastery"
-        }
-      ],
+      "study": {
+        "id": "studied",
+        "title": "למדתי היטב",
+        "xp": 10
+      },
+      "grade": {
+        "title": "ציון",
+        "pendingTitle": "עדיין אין",
+        "options": [
+          { "id": "excellent", "title": "מצטיין", "xp": 15, "medal": "gold" },
+          { "id": "mastery", "title": "שולט היטב", "xp": 10, "medal": "silver" },
+          { "id": "competent", "title": "שולט", "xp": 0, "medal": "bronze" },
+          { "id": "partial", "title": "שולט חלקית", "xp": 0, "medal": "bronze" }
+        ]
+      },
       "exams": [
         {
           "id": "math",
@@ -114,24 +111,21 @@
           "icon": "film"
         }
       ],
-      "achievements": [
-        {
-          "id": "studied",
-          "title": "למדתי טוב למבחן",
-          "xp": 10
-        },
-        {
-          "id": "mastery",
-          "title": "השגתי ציון ״שולט היטב״ ומעלה",
-          "xp": 10
-        },
-        {
-          "id": "excellent",
-          "title": "השגתי ציון ״מצטיין״",
-          "xp": 5,
-          "requires": "mastery"
-        }
-      ]
+      "study": {
+        "id": "studied",
+        "title": "למדתי היטב",
+        "xp": 10
+      },
+      "grade": {
+        "title": "ציון",
+        "pendingTitle": "עדיין אין",
+        "options": [
+          { "id": "excellent", "title": "מצטיין", "xp": 15, "medal": "gold" },
+          { "id": "mastery", "title": "שולט היטב", "xp": 10, "medal": "silver" },
+          { "id": "competent", "title": "שולט", "xp": 0, "medal": "bronze" },
+          { "id": "partial", "title": "שולט חלקית", "xp": 0, "medal": "bronze" }
+        ]
+      }
     }
   ]
 }

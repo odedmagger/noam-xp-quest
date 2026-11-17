@@ -7,7 +7,7 @@ import { RewardLadder } from './components/RewardLadder'
 import { LegacyMigration } from './components/LegacyMigration'
 import { getCloudServices } from './cloud/firebase'
 import { ProgressConflict, type CloudProgress, type ProgressStore } from './cloud-progress'
-import { changeAchievement, claimReward, maximumXp, rewardLadder, totalXp, type Config, type Progress, type Semester } from './quest'
+import { changeGrade, changeStudy, claimReward, maximumXp, rewardLadder, totalXp, type Config, type Progress, type Semester } from './quest'
 
 function XpCount({ xp }: { xp: number }) {
   const [display, setDisplay] = useState(xp)
@@ -181,10 +181,16 @@ function Quest({ semester, active, store }: { semester: Semester; active: boolea
           </div>
         </section>
         <ExamTable semester={semester} progress={progress} editable={editable} saving={isSaving}
-          onChange={(exam, achievement, status) => {
+          onStudyChange={(exam, status) => {
             void save({
-              preview: value => changeAchievement(value, semester, exam, achievement, status),
-              run: () => store.updateAchievement(semester, exam, achievement, status),
+              preview: value => changeStudy(value, semester, exam, status),
+              run: () => store.updateStudy(semester, exam, status),
+            })
+          }}
+          onGradeChange={(exam, grade) => {
+            void save({
+              preview: value => changeGrade(value, semester, exam, grade),
+              run: () => store.updateGrade(semester, exam, grade),
             })
           }} />
       </div>

@@ -6,7 +6,7 @@ import { createFirestoreStore } from '../../src/cloud/firestore-store'
 import { ProgressConflict } from '../../src/cloud-progress'
 import { readConfig } from '../../src/data/config'
 import { currentStudent } from '../../src/data/student'
-import { changeAchievement, emptyProgress, totalXp } from '../../src/quest'
+import { changeGrade, emptyProgress, totalXp } from '../../src/quest'
 
 const projectId = 'demo-noam-xp-quest'
 const config = readConfig()
@@ -40,6 +40,10 @@ const store = (db = guest()) => createFirestoreStore(collection(db, semesterPath
 
 function validData() {
   return { schemaVersion: 1, statuses: { [examId + ':studied']: 'achieved' }, claims: {}, updatedAt: serverTimestamp() }
+}
+
+function gradeData() {
+  return { ...validData(), schemaVersion: 2, grades: { [examId]: 'excellent' } }
 }
 
 async function seed(id: string, data: object) {
@@ -92,6 +96,13 @@ describe('Firestore Security Rules', () => {
       { ...validData(), claims: { unknown: true } },
       { ...validData(), statuses: [] },
       { ...validData(), schemaVersion: 2 },
+      { ...validData(), grades: {} },
+      { ...gradeData(), grades: [] },
+      { ...gradeData(), grades: { [examId]: 'outstanding' } },
+      { ...gradeData(), grades: { [examId]: { grade: 'mastery' } } },
+      { ...gradeData(), grades: { [examId]: null } },
+      { ...gradeData(), grades: { unknown: 'excellent' } },
+      { ...gradeData(), statuses: { [examId + ':mastery']: 'achieved' } },
       { ...validData(), xp: 999 },
       { ...validData(), updatedAt: new Date(0) },
     ]) await assertFails(setDoc(ref, data))
@@ -106,56 +117,117 @@ describe('Firestore Security Rules', () => {
     await assertFails(setDoc(ref, { ...delivered, statuses: { ...delivered.statuses, unknown: 'pending' } }))
     await assertFails(deleteDoc(ref))
   })
+
+  it('allows a v1-to-v2 upgrade without removing or rewriting legacy outcomes', async () => {
+    const ref = doc(guest(), semesterPath, semester.id)
+    const legacy = { ...validData(), statuses: { ...validData().statuses, [examId + ':mastery']: 'achieved' } }
+    const upgraded = { ...gradeData(), statuses: legacy.statuses }
+    await assertSucceeds(setDoc(ref, legacy))
+    await assertFails(setDoc(ref, gradeData()))
+    await assertFails(setDoc(ref, { ...upgraded, statuses: { ...legacy.statuses, [examId + ':mastery']: 'failed' } }))
+    await assertSucceeds(setDoc(ref, upgraded))
+    await assertFails(setDoc(ref, { ...upgraded, grades: {} }))
+    await assertFails(setDoc(ref, legacy))
+    await assertSucceeds(setDoc(ref, { ...upgraded, grades: { [examId]: 'pending' } }))
+  })
 })
 
 describe('Firestore progress repository', () => {
-  it('saves atomic grade changes and loads them from a new device while preserving history', async () => {
-    const other = historical.exams[0].id
-    await seed(historical.id, { ...validData(), statuses: { [other + ':studied']: 'achieved' } })
-    const first = store()
-    expect(await first.load(semester)).toEqual({ exists: false, progress: emptyProgress() })
-    const saved = await first.updateAchievement(semester, examId, 'excellent', 'achieved')
-    expect(saved.progress.exams[examId]).toEqual({ mastery: 'achieved', excellent: 'achieved' })
-    const second = store()
-    expect(await second.load(semester)).toEqual(saved)
-    await second.updateAchievement(semester, examId, 'mastery', 'failed')
-    expect((await first.load(semester)).progress.exams[examId]).toEqual({ mastery: 'failed', excellent: 'pending' })
-    expect(totalXp((await first.load(historical)).progress, historical)).toBe(10)
+  it('preserves simultaneous first saves in an empty semester', async () => {
+    const writes = await Promise.allSettled([
+      store().updateGrade(semester, examId, 'excellent'),
+      store().updateStudy(semester, examId, 'achieved'),
+    ])
+    expect(writes.filter(result => result.status === 'rejected')).toEqual([])
+    expect((await store().load(semester)).progress.exams[examId]).toEqual({ study: 'achieved', grade: 'excellent' })
   })
 
-  it('keeps prior unrelated and retired entries when saving an exam', async () => {
-    await seed(semester.id, { ...validData(), statuses: { ...validData().statuses, 'retired:studied': 'achieved' }, claims: { retired: true } })
-    await store().updateAchievement(semester, semester.exams[1].id, 'studied', 'failed')
-    const data = (await getDoc(doc(guest(), semesterPath, semester.id))).data()
-    expect(data?.statuses).toEqual({
+  it('saves and loads each grade from another client while preserving history', async () => {
+    const other = historical.exams[0].id
+    await seed(historical.id, { ...validData(), statuses: { [other + ':mastery']: 'achieved' } })
+    const historyRef = doc(guest(), semesterPath, historical.id)
+    const historyBefore = (await getDoc(historyRef)).data()
+    const first = store()
+    expect(await first.load(semester)).toEqual({ exists: false, progress: emptyProgress() })
+    const second = store()
+    for (const grade of ['competent', 'excellent', 'partial', 'mastery', 'pending'] as const) {
+      const saved = await first.updateGrade(semester, examId, grade)
+      expect(saved.progress.exams[examId]).toEqual({ grade })
+      expect(await second.load(semester)).toEqual(saved)
+    }
+    expect(totalXp((await first.load(historical)).progress, historical)).toBe(10)
+    expect((await getDoc(historyRef)).data()).toEqual(historyBefore)
+  })
+
+  it('derives legacy grades without writes and keeps the version during a study edit', async () => {
+    const [, { id: second }, { id: third }] = semester.exams
+    const statuses = {
       [examId + ':studied']: 'achieved',
-      [semester.exams[1].id + ':studied']: 'failed',
-      'retired:studied': 'achieved',
+      [examId + ':excellent']: 'achieved',
+      [examId + ':mastery']: 'failed',
+      [second + ':mastery']: 'achieved',
+      [second + ':excellent']: 'pending',
+      [third + ':excellent']: 'failed',
+      [third + ':mastery']: 'failed',
+    }
+    await seed(semester.id, { ...validData(), statuses, claims: { [firstReward.id]: true } })
+    const ref = doc(guest(), semesterPath, semester.id)
+    const before = (await getDoc(ref)).data()
+    const client = store()
+    const first = await client.load(semester)
+    expect(first.progress).toEqual({
+      exams: { [examId]: { study: 'achieved', grade: 'excellent' }, [second]: { grade: 'mastery' }, [third]: { grade: 'pending' } },
+      claimed: [firstReward.id],
     })
-    expect(data?.claims).toEqual({ retired: true })
+    expect(await client.load(semester)).toEqual(first)
+    expect((await getDoc(ref)).data()).toEqual(before)
+    await client.updateStudy(semester, second, 'failed')
+    expect((await getDoc(ref)).data()).toMatchObject({ schemaVersion: 1, statuses: { ...statuses, [second + ':studied']: 'failed' } })
+    expect((await getDoc(ref)).data()).not.toHaveProperty('grades')
+  })
+
+  it('preserves concurrent updates, retired values and claims and keeps an explicit unset grade', async () => {
+    const second = semester.exams[1].id
+    const statuses = { ...validData().statuses, [examId + ':mastery']: 'achieved', 'retired:studied': 'achieved' }
+    const claims = { [firstReward.id]: true, retired: true }
+    await seed(semester.id, { ...validData(), statuses, claims })
+    const writes = await Promise.allSettled([
+      store().updateGrade(semester, examId, 'pending'),
+      store().updateGrade(semester, second, 'competent'),
+      store().updateStudy(semester, second, 'failed'),
+    ])
+    expect(writes.filter(result => result.status === 'rejected')).toEqual([])
+    const ref = doc(guest(), semesterPath, semester.id)
+    const converted = (await getDoc(ref)).data()
+    expect(converted).toMatchObject({
+      schemaVersion: 2, statuses: { ...statuses, [second + ':studied']: 'failed' },
+      grades: { [examId]: 'pending', [second]: 'competent' }, claims,
+    })
+    const refreshed = await store().load(semester)
+    expect(refreshed.progress).toEqual({
+      exams: { [examId]: { study: 'achieved', grade: 'pending' }, [second]: { study: 'failed', grade: 'competent' } },
+      claimed: [firstReward.id],
+    })
+    expect(await store().updateGrade(semester, examId, 'pending')).toEqual(refreshed)
+    expect((await getDoc(ref)).data()).toEqual(converted)
   })
 
   it('preserves eligible reward claims after an XP correction and a refresh', async () => {
     const client = store()
     await expect(client.claimReward(semester, firstReward.id)).rejects.toMatchObject({ reason: 'reward-unavailable' })
-    let saved = await client.updateAchievement(semester, examId, 'studied', 'achieved')
-    for (const exam of semester.exams) {
-      for (const achievement of semester.achievements) {
-        if (totalXp(saved.progress, semester) >= firstReward.xp) break
-        saved = await client.updateAchievement(semester, exam.id, achievement.id, 'achieved')
-      }
-    }
+    await client.updateStudy(semester, examId, 'achieved')
+    const saved = await client.updateGrade(semester, examId, 'excellent')
     const xp = totalXp(saved.progress, semester)
     const claimed = await client.claimReward(semester, firstReward.id)
     expect(totalXp(claimed.progress, semester)).toBe(xp)
     await client.claimReward(semester, firstReward.id)
-    await client.updateAchievement(semester, examId, 'mastery', 'failed')
+    await client.updateGrade(semester, examId, 'mastery')
     expect((await store().load(semester)).progress.claimed).toEqual([firstReward.id])
   })
 
   it('allows an explicit import once, preserves claims and rejects a conflicting or empty import', async () => {
     const client = store()
-    const legacy = changeAchievement(emptyProgress(), semester, examId, 'excellent', 'achieved')
+    const legacy = changeGrade(emptyProgress(), semester, examId, 'excellent')
     await expect(client.importLegacy(semester, emptyProgress())).rejects.toThrow('No valid legacy progress')
     const restored = { ...legacy, claimed: [firstReward.id] }
     expect((await client.importLegacy(semester, { ...restored, claimed: [firstReward.id, firstReward.id, 'removed'] })).progress).toEqual(restored)
@@ -174,10 +246,11 @@ describe('Firestore progress repository', () => {
   })
 
   it('reports write failures and rejects malformed remote data without overwriting either record', async () => {
-    await expect(store().updateAchievement(historical, historical.exams[0].id, 'studied', 'achieved')).rejects.toMatchObject({ code: 'permission-denied' })
+    await expect(store().updateGrade(historical, historical.exams[0].id, 'excellent')).rejects.toMatchObject({ code: 'permission-denied' })
+    await expect(store().updateStudy(historical, historical.exams[0].id, 'achieved')).rejects.toMatchObject({ code: 'permission-denied' })
     await seed(semester.id, { schemaVersion: 99 })
     await expect(store().load(semester)).rejects.toThrow('Invalid cloud progress')
-    await expect(store().updateAchievement(semester, examId, 'studied', 'achieved')).rejects.toThrow('Invalid cloud progress')
+    await expect(store().updateStudy(semester, examId, 'achieved')).rejects.toThrow('Invalid cloud progress')
     expect((await getDoc(doc(guest(), semesterPath, semester.id))).data()).toEqual({ schemaVersion: 99 })
   })
 })

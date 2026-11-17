@@ -4,30 +4,61 @@ service cloud.firestore {
     // BEGIN GENERATED SEMESTER CONFIG
     function knownSemester(id) { return id in ["2026-a","2026-b"]; }
     function activeSemester(id) { return id == "2026-a"; }
-    function activeStatusKeys() { return ["math:studied","math:mastery","math:excellent","english:studied","english:mastery","english:excellent","science:studied","science:mastery","science:excellent","hebrew:studied","hebrew:mastery","hebrew:excellent"]; }
+    function activeStudyKeys() { return ["math:studied","english:studied","science:studied","hebrew:studied"]; }
+    function legacyStatusKeys() { return ["math:studied","english:studied","science:studied","hebrew:studied","math:mastery","math:excellent","english:mastery","english:excellent","science:mastery","science:excellent","hebrew:mastery","hebrew:excellent"]; }
+    function activeGradeKeys() { return ["math","english","science","hebrew"]; }
+    function gradeValues() { return ["pending","excellent","mastery","competent","partial"]; }
     function activeRewardKeys() { return ["robux-small","game","robux-large","vbucks"]; }
     // END GENERATED SEMESTER CONFIG
 
+    function validV1(data) {
+      return data.schemaVersion == 1
+        && data.keys().hasOnly(['schemaVersion', 'statuses', 'claims', 'updatedAt']);
+    }
+
+    function validV2(data) {
+      return data.schemaVersion == 2
+        && data.keys().hasOnly(['schemaVersion', 'statuses', 'claims', 'updatedAt', 'grades'])
+        && data.grades is map && data.grades.values().hasOnly(gradeValues());
+    }
+
     function validProgress(data) {
       return data.keys().hasAll(['schemaVersion', 'statuses', 'claims', 'updatedAt'])
-        && data.keys().hasOnly(['schemaVersion', 'statuses', 'claims', 'updatedAt'])
-        && data.schemaVersion is int && data.schemaVersion == 1
+        && data.schemaVersion is int && (validV1(data) || validV2(data))
         && data.statuses is map && data.statuses.values().hasOnly(['pending', 'achieved', 'failed'])
         && data.claims is map && data.claims.values().hasOnly([true])
         && data.updatedAt == request.time;
+    }
+
+    function validCreate(data) {
+      return data.claims.keys().hasOnly(activeRewardKeys())
+        && (data.schemaVersion == 1 && data.statuses.keys().hasOnly(legacyStatusKeys())
+          || data.schemaVersion == 2 && data.statuses.keys().hasOnly(activeStudyKeys())
+            && data.grades.keys().hasOnly(activeGradeKeys()));
+    }
+
+    function validUpdate(data, previous) {
+      let statusChanges = data.statuses.diff(previous.statuses);
+      let claimChanges = data.claims.diff(previous.claims);
+      let gradeChanges = data.get('grades', {}).diff(previous.get('grades', {}));
+      return statusChanges.removedKeys().size() == 0
+        && claimChanges.removedKeys().size() == 0
+        && claimChanges.affectedKeys().hasOnly(activeRewardKeys())
+        && (data.schemaVersion == 1 && previous.schemaVersion == 1
+            && statusChanges.affectedKeys().hasOnly(legacyStatusKeys())
+          || data.schemaVersion == 2 && previous.schemaVersion in [1, 2]
+            && statusChanges.affectedKeys().hasOnly(activeStudyKeys())
+            && gradeChanges.removedKeys().size() == 0
+            && gradeChanges.affectedKeys().hasOnly(activeGradeKeys()));
     }
 
     // The prototype grants public access only to configured semester documents.
     match /semesters/{semesterId} {
       allow get: if knownSemester(semesterId);
       allow create: if activeSemester(semesterId) && validProgress(request.resource.data)
-        && request.resource.data.statuses.keys().hasOnly(activeStatusKeys())
-        && request.resource.data.claims.keys().hasOnly(activeRewardKeys());
+        && validCreate(request.resource.data);
       allow update: if activeSemester(semesterId) && validProgress(request.resource.data)
-        && request.resource.data.statuses.diff(resource.data.statuses).removedKeys().size() == 0
-        && request.resource.data.statuses.diff(resource.data.statuses).affectedKeys().hasOnly(activeStatusKeys())
-        && request.resource.data.claims.diff(resource.data.claims).removedKeys().size() == 0
-        && request.resource.data.claims.diff(resource.data.claims).affectedKeys().hasOnly(activeRewardKeys());
+        && validUpdate(request.resource.data, resource.data);
     }
   }
 }

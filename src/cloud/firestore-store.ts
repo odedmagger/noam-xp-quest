@@ -1,25 +1,34 @@
 import { doc, getDocFromServer, runTransaction, serverTimestamp, type CollectionReference } from 'firebase/firestore'
 import { ProgressConflict, type CloudProgress, type ProgressStore } from '../cloud-progress'
 import { normalizeProgress } from '../progress-store'
-import { changeAchievement, claimReward, emptyProgress, isStatus, type Progress, type Semester, type Status } from '../quest'
+import { claimReward, emptyProgress, isGrade, isStatus, type Grade, type Progress, type Semester, type Status } from '../quest'
 
-type RecordData = {
-  schemaVersion: 1
+type ProgressMaps = {
   statuses: Record<string, Status>
   claims: Record<string, true>
 }
+type RecordData = ProgressMaps & (
+  { schemaVersion: 1; grades?: never } |
+  { schemaVersion: 2; grades: Record<string, Grade> }
+)
+type ProgressPatch = Partial<ProgressMaps> & { grades?: Record<string, Grade> }
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
 function decode(data: unknown): RecordData {
-  if (!record(data) || data.schemaVersion !== 1 ||
+  if (!record(data) ||
     !record(data.statuses) || !Object.values(data.statuses).every(isStatus) ||
     !record(data.claims) || !Object.values(data.claims).every(claim => claim === true)) {
     throw new Error('Invalid cloud progress')
   }
-  return { schemaVersion: 1, statuses: data.statuses as RecordData['statuses'], claims: data.claims as RecordData['claims'] }
+  const maps = { statuses: data.statuses as ProgressMaps['statuses'], claims: data.claims as ProgressMaps['claims'] }
+  if (data.schemaVersion === 1 && data.grades === undefined) return { ...maps, schemaVersion: 1 }
+  if (data.schemaVersion === 2 && record(data.grades) && Object.values(data.grades).every(isGrade)) {
+    return { ...maps, schemaVersion: 2, grades: data.grades as Record<string, Grade> }
+  }
+  throw new Error('Invalid cloud progress')
 }
 
 function statusKey(examId: string, achievementId: string) {
@@ -27,28 +36,34 @@ function statusKey(examId: string, achievementId: string) {
 }
 
 function readProgress(semester: Semester, data: RecordData): Progress {
-  const exams: Progress['exams'] = {}
-  for (const exam of semester.exams) {
-    for (const item of semester.achievements) {
-      const status = data.statuses[statusKey(exam.id, item.id)]
-      if (!status) continue
-      exams[exam.id] ??= {}
-      exams[exam.id][item.id] = status
-    }
-  }
+  const exams = Object.fromEntries(semester.exams.map(({ id }) => [id, {
+    study: data.statuses[statusKey(id, semester.study.id)],
+    grade: data.grades?.[id],
+    excellent: data.statuses[statusKey(id, 'excellent')],
+    mastery: data.statuses[statusKey(id, 'mastery')],
+  }]))
   return normalizeProgress({ exams, claimed: Object.keys(data.claims) }, semester)
 }
 
-function writeProgress(progress: Progress, previous?: RecordData): RecordData {
-  const statuses = { ...previous?.statuses }
-  const claims = { ...previous?.claims }
-  for (const [examId, exam] of Object.entries(progress.exams)) {
-    for (const [achievementId, status] of Object.entries(exam)) {
-      statuses[statusKey(examId, achievementId)] = status
-    }
+function mergeRecord(previous: RecordData | undefined, patch: ProgressPatch): RecordData {
+  const maps = {
+    statuses: { ...previous?.statuses, ...patch.statuses },
+    claims: { ...previous?.claims, ...patch.claims },
   }
-  for (const rewardId of progress.claimed) claims[rewardId] = true
-  return { schemaVersion: 1, statuses, claims }
+  if (previous?.schemaVersion === 2 || patch.grades) {
+    return { ...maps, schemaVersion: 2, grades: { ...previous?.grades, ...patch.grades } }
+  }
+  return { ...maps, schemaVersion: 1 }
+}
+
+function importRecord(progress: Progress, semester: Semester): ProgressPatch {
+  const statuses: ProgressMaps['statuses'] = {}
+  const grades: Record<string, Grade> = {}
+  for (const [examId, exam] of Object.entries(progress.exams)) {
+    if (exam.study !== undefined) statuses[statusKey(examId, semester.study.id)] = exam.study
+    if (exam.grade !== undefined) grades[examId] = exam.grade
+  }
+  return { statuses, grades, claims: Object.fromEntries(progress.claimed.map(id => [id, true])) }
 }
 
 export function createFirestoreStore(semesters: CollectionReference): ProgressStore {
@@ -61,35 +76,51 @@ export function createFirestoreStore(semesters: CollectionReference): ProgressSt
       : { exists: false, progress: emptyProgress() }
   }
 
-  function transact(semester: Semester, apply: (current: CloudProgress, data?: RecordData) => RecordData | undefined) {
+  function transact(semester: Semester, apply: (current: CloudProgress, data?: RecordData) => ProgressPatch | undefined) {
     const reference = semesterDoc(semester)
     return runTransaction(semesters.firestore, async transaction => {
       const snapshot = await transaction.get(reference)
       const data = snapshot.exists() ? decode(snapshot.data()) : undefined
       const current = { exists: !!data, progress: data ? readProgress(semester, data) : emptyProgress() }
-      const next = apply(current, data)
-      if (!next) return current
-      transaction.set(reference, { ...next, updatedAt: serverTimestamp() })
+      const patch = apply(current, data)
+      if (!patch) return current
+      const next = mergeRecord(data, patch)
+      if (data) {
+        const version = patch.grades ? { schemaVersion: 2 } : {}
+        transaction.set(reference, { ...patch, ...version, updatedAt: serverTimestamp() }, { merge: true })
+      } else {
+        transaction.set(reference, { ...next, updatedAt: serverTimestamp() })
+      }
       return { exists: true, progress: readProgress(semester, next) }
     })
   }
 
   return {
     load,
-    updateAchievement(semester, examId, achievementId, status) {
+    updateStudy(semester, examId, status) {
       if (!isStatus(status)) return Promise.reject(new Error('Invalid achievement status'))
-      return transact(semester, ({ progress }, data) => {
-        const next = changeAchievement(progress, semester, examId, achievementId, status)
-        return next === progress ? undefined : writeProgress(next, data)
+      if (!semester.exams.some(exam => exam.id === examId)) return Promise.reject(new Error('Unknown exam'))
+      return transact(semester, (_, data) => {
+        const key = statusKey(examId, semester.study.id)
+        if (data?.statuses[key] === status) return
+        return { statuses: { [key]: status } }
+      })
+    },
+    updateGrade(semester, examId, grade) {
+      if (!isGrade(grade)) return Promise.reject(new Error('Invalid grade'))
+      if (!semester.exams.some(exam => exam.id === examId)) return Promise.reject(new Error('Unknown exam'))
+      return transact(semester, (_, data) => {
+        if (data?.grades?.[examId] === grade) return
+        return { grades: { [examId]: grade } }
       })
     },
     claimReward(semester, rewardId) {
-      return transact(semester, (current, data) => {
+      return transact(semester, current => {
         const { progress } = current
         if (progress.claimed.includes(rewardId)) return
         const next = claimReward(progress, semester, rewardId)
         if (next === progress) throw new ProgressConflict('reward-unavailable', current)
-        return writeProgress(next, data)
+        return { claims: { [rewardId]: true } }
       })
     },
     importLegacy(semester, legacy) {
@@ -99,7 +130,7 @@ export function createFirestoreStore(semesters: CollectionReference): ProgressSt
       }
       return transact(semester, (current, data) => {
         if (data) throw new ProgressConflict('existing-progress', current)
-        return writeProgress(validated)
+        return importRecord(validated, semester)
       })
     },
   }

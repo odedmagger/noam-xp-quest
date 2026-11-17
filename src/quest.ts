@@ -1,5 +1,16 @@
 export type Status = 'pending' | 'achieved' | 'failed'
-export type Achievement = { id: string; title: string; xp: number; requires?: string }
+export const studyAchievementId = 'studied'
+export const studyXp = 10
+export const gradePolicy = {
+  excellent: { xp: 15, medal: 'gold' },
+  mastery: { xp: 10, medal: 'silver' },
+  competent: { xp: 0, medal: 'bronze' },
+  partial: { xp: 0, medal: 'bronze' },
+} as const
+export type GradeId = keyof typeof gradePolicy
+export type Grade = GradeId | 'pending'
+export type GradeOption = { id: GradeId; title: string; xp: number; medal: 'gold' | 'silver' | 'bronze' }
+export type StudyAchievement = { id: typeof studyAchievementId; title: string; xp: number }
 export type Exam = { id: string; subject: string; title?: string; date?: string; icon?: string }
 export type Reward = { id: string; title: string; xp: number; description?: string; type?: string; icon?: string }
 export type Semester = {
@@ -8,11 +19,13 @@ export type Semester = {
   startDate?: string
   endDate?: string
   exams: Exam[]
-  achievements: Achievement[]
+  study: StudyAchievement
+  grade: { title: string; pendingTitle: string; options: GradeOption[] }
   rewards: Reward[]
 }
 export type Config = { activeSemesterId: string; semesters: Semester[] }
-export type Progress = { exams: Record<string, Record<string, Status>>; claimed: string[] }
+export type ExamProgress = { study?: Status; grade?: Grade }
+export type Progress = { exams: Record<string, ExamProgress>; claimed: string[] }
 
 export function emptyProgress(): Progress {
   return { exams: {}, claimed: [] }
@@ -22,38 +35,37 @@ export function isStatus(value: unknown): value is Status {
   return value === 'pending' || value === 'achieved' || value === 'failed'
 }
 
-export function maximumXp(semester: Semester) {
-  return semester.exams.length * semester.achievements.reduce((sum, item) => sum + item.xp, 0)
+export function isGradeId(value: unknown): value is GradeId {
+  return typeof value === 'string' && Object.hasOwn(gradePolicy, value)
 }
 
-export function changeAchievement(
-  progress: Progress, semester: Semester, examId: string, achievementId: string, status: Status,
-): Progress {
-  const achievement = semester.achievements.find(item => item.id === achievementId)
-  if (!achievement || !semester.exams.some(exam => exam.id === examId)) return progress
+export function isGrade(value: unknown): value is Grade {
+  return value === 'pending' || isGradeId(value)
+}
 
-  const exam = { ...progress.exams[examId], [achievementId]: status }
-  function award(item: Achievement) {
-    exam[item.id] = 'achieved'
-    const prerequisite = semester.achievements.find(candidate => candidate.id === item.requires)
-    if (prerequisite) award(prerequisite)
-  }
-  function revokeDependents(id: string) {
-    for (const dependent of semester.achievements.filter(item => item.requires === id)) {
-      if (exam[dependent.id] === 'achieved') exam[dependent.id] = 'pending'
-      revokeDependents(dependent.id)
-    }
-  }
+export function maximumExamXp(semester: Semester) {
+  return semester.study.xp + Math.max(...semester.grade.options.map(option => option.xp))
+}
 
-  if (status === 'achieved') award(achievement)
-  else revokeDependents(achievementId)
-  return { ...progress, exams: { ...progress.exams, [examId]: exam } }
+export function maximumXp(semester: Semester) {
+  return semester.exams.length * maximumExamXp(semester)
+}
+
+export function changeStudy(progress: Progress, semester: Semester, examId: string, study: Status): Progress {
+  if (!semester.exams.some(exam => exam.id === examId)) return progress
+  return { ...progress, exams: { ...progress.exams, [examId]: { ...progress.exams[examId], study } } }
+}
+
+export function changeGrade(progress: Progress, semester: Semester, examId: string, grade: Grade): Progress {
+  if (!semester.exams.some(exam => exam.id === examId)) return progress
+  return { ...progress, exams: { ...progress.exams, [examId]: { ...progress.exams[examId], grade } } }
 }
 
 export function examXp(progress: Progress, semester: Semester, examId: string) {
-  return semester.achievements.reduce((sum, item) => (
-    sum + (progress.exams[examId]?.[item.id] === 'achieved' ? item.xp : 0)
-  ), 0)
+  const exam = progress.exams[examId]
+  const earnedStudyXp = exam?.study === 'achieved' ? semester.study.xp : 0
+  const earnedGradeXp = semester.grade.options.find(option => option.id === exam?.grade)?.xp ?? 0
+  return earnedStudyXp + earnedGradeXp
 }
 
 export function totalXp(progress: Progress, semester: Semester) {

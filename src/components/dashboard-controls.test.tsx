@@ -1,26 +1,44 @@
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { readConfig } from '../data/config'
-import { emptyProgress, rewardLadder } from '../quest'
+import { emptyProgress, rewardLadder, type Progress } from '../quest'
 import { ExamTable } from './ExamTable'
 import { RewardLadder } from './RewardLadder'
 
 const config = readConfig()
 const semester = config.semesters.find(item => item.id === config.activeSemesterId)!
 const progress = emptyProgress()
+const callbacks = { onStudyChange: vi.fn(), onGradeChange: vi.fn() }
+
+function renderExams(outcomes: Progress, editable = true, saving = false) {
+  return renderToStaticMarkup(<ExamTable semester={semester} progress={outcomes} editable={editable} saving={saving} {...callbacks} />)
+}
 
 describe('student dashboard controls', () => {
-  it('offers all three status options inline and keeps historical rows read-only', () => {
-    const active = renderToStaticMarkup(<ExamTable semester={semester} progress={progress} editable saving={false} onChange={vi.fn()} />)
-    const historical = renderToStaticMarkup(<ExamTable semester={semester} progress={progress} editable={false} saving={false} onChange={vi.fn()} />)
-    expect(active.match(/<select /g)).toHaveLength(semester.exams.length * semester.achievements.length)
-    for (const status of ['pending', 'achieved', 'failed']) expect(active).toContain('value="' + status + '"')
+  it('offers two controls per exam with all study and grade options available', () => {
+    const active = renderExams(progress)
+    const historical = renderExams(progress, false)
+    const selects = active.match(/<select .*?<\/select>/g) ?? []
+    expect(selects).toHaveLength(semester.exams.length * 2)
+    for (const [index, select] of selects.entries()) {
+      const values = [...select.matchAll(/<option value="([^"]+)"/g)].map(match => match[1])
+      expect(values).toEqual(index % 2 ? ['pending', ...semester.grade.options.map(option => option.id)] : ['pending', 'achieved', 'failed'])
+    }
     expect(historical).not.toContain('<select')
     expect(historical).toContain('ממתין')
+    expect(historical).toContain('עדיין אין')
+    expect(historical).not.toContain('grade-medal')
+  })
+
+  it.each(semester.grade.options)('shows the $medal medal alongside the grade $title', option => {
+    const outcomes = { exams: { [semester.exams[0].id]: { grade: option.id } }, claimed: [] }
+    const historical = renderExams(outcomes, false)
+    expect(historical).toContain('grade-medal ' + option.medal)
+    expect(historical).toContain('<span>' + option.title + '</span>')
   })
 
   it('keeps status controls mounted while a save is pending', () => {
-    const saving = renderToStaticMarkup(<ExamTable semester={semester} progress={progress} editable saving onChange={vi.fn()} />)
+    const saving = renderExams(progress, true, true)
     expect(saving).toContain('aria-disabled="true"')
     expect(saving).toContain('<select')
   })

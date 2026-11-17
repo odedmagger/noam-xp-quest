@@ -12,9 +12,10 @@
 10. Prefer autonomous implementation over asking routine technical questions.
 11. After verifying completed source changes, commit the task's changes and push the commit to the corresponding branch on GitHub (`origin`) as part of the same task. Leave unrelated changes out of the commit. Follow any task-specific publishing instructions and report a failed or blocked push.
 12. Keep achievement progress student-managed. Introduce Parent Edit Mode or parent approval only after an explicit product decision.
-13. Keep Firestore progress and JSON configuration. Reuse pure business logic independently of persistence and any future authentication. Maintain tests for XP, dependencies, reward claims, and persistence.
+13. Keep Firestore progress and JSON configuration. Reuse pure business logic independently of persistence and any future authentication. Maintain tests for XP, grade changes, reward claims, and persistence.
 14. Keep account identities separate from student profiles and keep student-specific assumptions out of reusable logic. Implement multi-user functionality only when explicitly requested.
 15. Run `npm run test:emulator` when modifying rules or cloud persistence. Preserve existing data and obtain explicit approval before destructive migrations, live rule changes, or public deployment.
+16. Use one independent three-state study achievement and one grade field per exam as defined in `docs/PRODUCT.md`. Keep the old dependency-based grade achievements confined to legacy data compatibility.
 
 ### Product documentation maintenance
 

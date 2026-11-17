@@ -1,4 +1,4 @@
-import { maximumXp, type Config, type Semester } from '../quest'
+import { gradePolicy, isGradeId, maximumXp, studyAchievementId, studyXp, type Config, type Semester } from '../quest'
 import json from './semesters.json'
 
 type Row = Record<string, unknown>
@@ -66,27 +66,32 @@ export function validateConfig(value: unknown): Config {
       id, subject: string(row.subject, path + '.subject'), title: optionalText(row.title, path + '.title'),
       date: date(row.date, path + '.date'), icon: optionalText(row.icon, path + '.icon'),
     }))
-    const achievements = entries(row.achievements, path + '.achievements').map(({ row, id, path }) => ({
-      id, title: string(row.title, path + '.title'), xp: points(row.xp, path + '.xp'),
-      requires: row.requires === undefined ? undefined : identifier(row.requires, path + '.requires'),
-    }))
-    if (achievements.length !== 3) fail(path + '.achievements', 'נדרשים בדיוק שלושה הישגים')
-    const requirements = new Map(achievements.map(item => [item.id, item.requires]))
-    for (const item of achievements) {
-      const seen = new Set([item.id])
-      let required = item.requires
-      while (required) {
-        if (!requirements.has(required) || seen.has(required)) fail(path + '.achievements.' + item.id, 'תלות לא תקינה: ' + required)
-        seen.add(required)
-        required = requirements.get(required)
-      }
+    const study = object(row.study, path + '.study')
+    if (study.id !== studyAchievementId || study.xp !== studyXp || row.achievements !== undefined) {
+      fail(path + '.study', 'נדרשת הגדרת למידה אחת בשווי 10 נקודות')
     }
+    const grade = object(row.grade, path + '.grade')
+    const options = entries(grade.options, path + '.grade.options').map(({ row, id, path }) => {
+      if (!isGradeId(id)) fail(path, 'מזהה ציון לא תקין')
+      const { xp, medal } = gradePolicy[id]
+      if (row.xp !== xp || row.medal !== medal) fail(path, 'נקודות או מדליה לא תואמות לציון')
+      return { id, title: string(row.title, path + '.title'), xp, medal }
+    })
+    if (options.length !== Object.keys(gradePolicy).length) fail(path + '.grade.options', 'נדרשים בדיוק ארבעה ציונים')
     const rewards = entries(row.rewards, path + '.rewards').map(({ row, id, path }) => ({
       id, title: string(row.title, path + '.title'), xp: points(row.xp, path + '.xp'),
       description: optionalText(row.description, path + '.description'),
       type: optionalText(row.type, path + '.type'), icon: optionalText(row.icon, path + '.icon'),
     }))
-    const semester = { id, name: string(row.name, path + '.name'), startDate, endDate, exams, achievements, rewards }
+    const semester: Semester = {
+      id, name: string(row.name, path + '.name'), startDate, endDate, exams, rewards,
+      study: { id: studyAchievementId, title: string(study.title, path + '.study.title'), xp: studyXp },
+      grade: {
+        title: string(grade.title, path + '.grade.title'),
+        pendingTitle: string(grade.pendingTitle, path + '.grade.pendingTitle'),
+        options,
+      },
+    }
     const maximum = maximumXp(semester)
     if (!Number.isSafeInteger(maximum)) fail(path, 'סכום נקודות גדול מדי')
     for (const reward of rewards) {

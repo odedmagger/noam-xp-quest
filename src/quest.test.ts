@@ -1,17 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { readConfig, validateConfig } from './data/config'
 import { deserializeProgress, readLegacyBackup, readLegacyProgress, serializeLegacyBackup, serializeProgress, storageKey } from './progress-store'
-import { canClaim, changeAchievement, claimReward, emptyProgress, maximumXp, rewardLadder, totalXp, type Progress, type Semester } from './quest'
+import { canClaim, changeGrade, changeStudy, claimReward, emptyProgress, examXp, maximumExamXp, maximumXp, rewardLadder, totalXp, type Progress, type Semester } from './quest'
 
 const active: Semester = {
   id: 'test-active',
   name: 'סמסטר פעיל',
   exams: ['math', 'english', 'science', 'hebrew'].map(id => ({ id, subject: id })),
-  achievements: [
-    { id: 'studied', title: 'למדתי', xp: 10 },
-    { id: 'mastery', title: 'שולט היטב', xp: 10 },
-    { id: 'excellent', title: 'מצטיין', xp: 5, requires: 'mastery' },
-  ],
+  study: { id: 'studied', title: 'למדתי היטב', xp: 10 },
+  grade: readConfig().semesters[0].grade,
   rewards: [25, 50, 75, 100].map(xp => ({ id: 'reward-' + xp, title: 'פרס', xp })),
 }
 const historical = { ...active, id: 'test-historical' }
@@ -19,39 +16,46 @@ const semesters = [active, historical]
 const firstExam = active.exams[0].id
 
 function earnFullExam(progress: Progress, examId = firstExam) {
-  const prepared = changeAchievement(progress, active, examId, 'studied', 'achieved')
-  return changeAchievement(prepared, active, examId, 'excellent', 'achieved')
+  return changeGrade(changeStudy(progress, active, examId, 'achieved'), active, examId, 'excellent')
 }
 
-describe('achievement rules', () => {
-  it('scores zero for pending, failed and empty exams', () => {
-    let progress = changeAchievement(emptyProgress(), active, firstExam, 'studied', 'pending')
-    progress = changeAchievement(progress, active, firstExam, 'mastery', 'failed')
-    expect(totalXp(progress, active)).toBe(0)
+describe('exam scoring', () => {
+  it.each([
+    ['excellent', 15], ['mastery', 10], ['competent', 0], ['partial', 0], ['pending', 0],
+  ] as const)('awards %s its configured XP independently of study', (grade, xp) => {
+    const graded = changeGrade(emptyProgress(), active, firstExam, grade)
+    expect(examXp(graded, active, firstExam)).toBe(xp)
+    for (const study of ['pending', 'failed', 'achieved'] as const) {
+      const progress = changeStudy(graded, active, firstExam, study)
+      expect(progress.exams[firstExam]).toEqual({ study, grade })
+      expect(examXp(progress, active, firstExam)).toBe(xp + (study === 'achieved' ? 10 : 0))
+    }
+  })
+
+  it('awards zero for an unrecorded exam or an empty semester', () => {
+    expect(examXp(emptyProgress(), active, firstExam)).toBe(0)
     const empty = { ...active, exams: [], rewards: [] }
     expect(maximumXp(empty)).toBe(0)
-    expect(totalXp(progress, empty)).toBe(0)
+    expect(totalXp(emptyProgress(), empty)).toBe(0)
   })
 
   it('calculates the maximum from the configured exams', () => {
     const progress = active.exams.reduce((earned, exam) => earnFullExam(earned, exam.id), emptyProgress())
+    expect(maximumExamXp(active)).toBe(25)
     expect(totalXp(progress, active)).toBe(100)
     expect(maximumXp(active)).toBe(100)
     expect(maximumXp({ ...active, exams: [...active.exams, ...active.exams.slice(0, 2)] })).toBe(150)
   })
 
-  it('achieving excellent also achieves mastery without awarding study XP', () => {
-    const progress = changeAchievement(emptyProgress(), active, firstExam, 'excellent', 'achieved')
-    expect(progress.exams[firstExam]).toEqual({ excellent: 'achieved', mastery: 'achieved' })
-    expect(totalXp(progress, active)).toBe(15)
-  })
-
-  it.each(['pending', 'failed'] as const)('revokes excellent when mastery changes to %s and keeps study XP', status => {
-    const full = earnFullExam(emptyProgress())
-    const revoked = changeAchievement(full, active, firstExam, 'mastery', status)
-    expect(revoked.exams[firstExam]).toEqual({ excellent: 'pending', mastery: status, studied: 'achieved' })
-    expect(totalXp(revoked, active)).toBe(10)
-    expect(totalXp(full, active)).toBe(25)
+  it('accepts lower and higher corrections directly and updates the semester total', () => {
+    const secondExam = active.exams[1].id
+    const full = earnFullExam(earnFullExam(emptyProgress()), secondExam)
+    const lower = changeGrade(full, active, firstExam, 'partial')
+    expect(lower.exams[firstExam]).toEqual({ study: 'achieved', grade: 'partial' })
+    expect(totalXp(lower, active)).toBe(35)
+    const higher = changeGrade(lower, active, firstExam, 'mastery')
+    expect(totalXp(higher, active)).toBe(45)
+    expect(totalXp(full, active)).toBe(50)
   })
 })
 
@@ -71,10 +75,11 @@ describe('rewards', () => {
     const progress = claimReward(earnFullExam(emptyProgress()), active, reward.id)
     expect(totalXp(progress, active)).toBe(25)
     expect(claimReward(progress, active, reward.id)).toBe(progress)
-    const corrected = changeAchievement(progress, active, firstExam, 'mastery', 'failed')
+    const corrected = changeGrade(progress, active, firstExam, 'pending')
     expect(corrected.claimed).toEqual([reward.id])
     expect(totalXp(corrected, active)).toBe(10)
     expect(rewardLadder(active, 10).milestone).toBe(0)
+    expect(rewardLadder(active, totalXp(changeGrade(corrected, active, firstExam, 'excellent'), active)).milestone).toBe(1)
     expect(deserializeProgress(serializeProgress(corrected), active)).toEqual(corrected)
   })
 })
@@ -91,7 +96,7 @@ describe('progress persistence', () => {
     const restored = readLegacyBackup(serializeLegacyBackup(active.id, original), active)
     expect(local).toEqual(restored)
     expect(restored.progress).toEqual({
-      exams: { [firstExam]: { mastery: 'achieved', excellent: 'achieved' } },
+      exams: { [firstExam]: { grade: 'excellent' } },
       claimed: [active.rewards[0].id],
     })
     expect(stored.get(storageKey(active.id))).toBe(original)
@@ -119,9 +124,23 @@ describe('progress persistence', () => {
       claimed: ['obsolete', active.rewards[0].id, active.rewards[0].id, 123],
     })
     expect(deserializeProgress(value, active)).toEqual({
-      exams: { [firstExam]: { excellent: 'achieved', mastery: 'achieved' } },
+      exams: { [firstExam]: { grade: 'excellent' } },
       claimed: [active.rewards[0].id],
     })
+  })
+
+  it.each([
+    [{ mastery: 'achieved', excellent: 'failed' }, 'mastery'],
+    [{ mastery: 'failed', excellent: 'achieved' }, 'excellent'],
+    [{ mastery: 'achieved', excellent: 'achieved' }, 'excellent'],
+    [{ mastery: 'failed', excellent: 'pending' }, 'pending'],
+    [{ mastery: 'achieved', excellent: 'achieved', grade: 'pending' }, 'pending'],
+    [{ excellent: 'achieved', grade: 'partial' }, 'partial'],
+  ])('normalizes legacy grades once while keeping study and claims (%j)', (legacy, grade) => {
+    const original = { exams: { [firstExam]: { ...legacy, studied: 'achieved' } }, claimed: [active.rewards[0].id] }
+    const normalized = deserializeProgress(JSON.stringify(original), active)
+    expect(normalized).toEqual({ exams: { [firstExam]: { study: 'achieved', grade } }, claimed: original.claimed })
+    expect(deserializeProgress(serializeProgress(normalized), active)).toEqual(normalized)
   })
 })
 
@@ -135,11 +154,17 @@ describe('configuration validation', () => {
     expect(() => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, exams: [active.exams[0], active.exams[0]] }] })).toThrow('מזהה כפול')
   })
 
-  it('rejects cycles and missing prerequisites', () => {
-    for (const requires of ['missing', 'excellent']) {
-      const achievements = active.achievements.map(item => item.id === 'mastery' ? { ...item, requires } : item)
-      expect(() => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, achievements }] })).toThrow('תלות לא תקינה')
-    }
+  it('requires the exact grade IDs, XP values, medals and a separately labeled pending state', () => {
+    const [first, ...rest] = active.grade.options
+    const validate = (grade: unknown) => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, grade }] })
+    expect(() => validate({ ...active.grade, options: rest })).toThrow('ארבעה ציונים')
+    expect(() => validate({ ...active.grade, options: [first, first, ...rest] })).toThrow('מזהה כפול')
+    expect(() => validate({ ...active.grade, options: [{ ...first, id: 'pending' }, ...rest] })).toThrow('מזהה ציון')
+    expect(() => validate({ ...active.grade, options: [{ ...first, xp: 5 }, ...rest] })).toThrow('נקודות או מדליה')
+    expect(() => validate({ ...active.grade, options: [{ ...first, medal: 'bronze' }, ...rest] })).toThrow('נקודות או מדליה')
+    expect(() => validate({ ...active.grade, pendingTitle: '' })).toThrow('נדרש טקסט')
+    expect(() => validateConfig({ activeSemesterId: active.id, semesters: [{ ...active, study: { ...active.study, xp: 20 } }] }))
+      .toThrow('10 נקודות')
   })
 
   it('rejects impossible rewards and missing active semesters', () => {
