@@ -189,7 +189,7 @@ describe('Firestore progress repository', () => {
   it('preserves concurrent updates, retired values and claims and keeps an explicit unset grade', async () => {
     const second = semester.exams[1].id
     const statuses = { ...validData().statuses, [examId + ':mastery']: 'achieved', 'retired:studied': 'achieved' }
-    const claims = { [firstReward.id]: true, retired: true }
+    const claims = { [firstReward.id]: true, vbucks: true }
     await seed(semester.id, { ...validData(), statuses, claims })
     const writes = await Promise.allSettled([
       store().updateGrade(semester, examId, 'pending'),
@@ -216,13 +216,16 @@ describe('Firestore progress repository', () => {
     const client = store()
     await expect(client.claimReward(semester, firstReward.id)).rejects.toMatchObject({ reason: 'reward-unavailable' })
     await client.updateStudy(semester, examId, 'achieved')
-    const saved = await client.updateGrade(semester, examId, 'excellent')
-    const xp = totalXp(saved.progress, semester)
+    await client.updateGrade(semester, examId, 'excellent')
+    const saved = await client.updateGrade(semester, semester.exams[1].id, 'excellent')
+    expect(totalXp(saved.progress, semester)).toBe(firstReward.xp)
     const claimed = await client.claimReward(semester, firstReward.id)
-    expect(totalXp(claimed.progress, semester)).toBe(xp)
+    expect(totalXp(claimed.progress, semester)).toBe(firstReward.xp)
     await client.claimReward(semester, firstReward.id)
     await client.updateGrade(semester, examId, 'mastery')
-    expect((await store().load(semester)).progress.claimed).toEqual([firstReward.id])
+    const refreshed = (await store().load(semester)).progress
+    expect(totalXp(refreshed, semester)).toBeLessThan(firstReward.xp)
+    expect(refreshed.claimed).toEqual([firstReward.id])
   })
 
   it('allows an explicit import once, preserves claims and rejects a conflicting or empty import', async () => {

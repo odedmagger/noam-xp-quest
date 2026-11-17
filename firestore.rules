@@ -8,7 +8,7 @@ service cloud.firestore {
     function legacyStatusKeys() { return ["math:studied","english:studied","science:studied","hebrew:studied","math:mastery","math:excellent","english:mastery","english:excellent","science:mastery","science:excellent","hebrew:mastery","hebrew:excellent"]; }
     function activeGradeKeys() { return ["math","english","science","hebrew"]; }
     function gradeValues() { return ["pending","excellent","mastery","competent","partial"]; }
-    function activeRewardKeys() { return ["robux-small","game","robux-large","vbucks"]; }
+    function activeRewardKeys() { return ["vbucks-800","robux-1000-level-50","vbucks-2400","robux-1000-level-70","vbucks-4500","vbucks-12500"]; }
     // END GENERATED SEMESTER CONFIG
 
     function validV1(data) {

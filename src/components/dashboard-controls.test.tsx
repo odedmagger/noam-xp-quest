@@ -18,11 +18,11 @@ function renderExams(outcomes: Progress, editable = true, saving = false) {
 
 describe('student dashboard controls', () => {
   it('shows next-level XP separately from the semester total and the saved level', () => {
-    const { ordered } = rewardLadder(semester, 35)
-    const markup = renderToStaticMarkup(<XpHeader xp={45} confirmedXp={35} maxXp={100} levels={ordered} />)
-    expect(markup).toContain('aria-valuenow="40"')
-    expect(markup).toContain('aria-valuetext="10 מתוך 25 נקודות לרמה 2"')
-    expect(markup).toContain('<strong>45</strong> / 100 XP')
+    const { ordered } = rewardLadder(semester, 45)
+    const markup = renderToStaticMarkup(<XpHeader xp={55} confirmedXp={45} maxXp={100} levels={ordered} />)
+    expect(markup).toContain('aria-valuenow="50"')
+    expect(markup).toContain('aria-valuetext="5 מתוך 10 נקודות לרמה 2"')
+    expect(markup).toContain('<strong>55</strong> / 100 XP')
     expect(markup).toContain('רמה נוכחית 1')
     expect(markup).toContain('<div class="level-feedback" role="status"></div>')
     expect(markup).not.toContain('עלית לרמה')
@@ -108,5 +108,18 @@ describe('student dashboard controls', () => {
     const delivered = render(0, true, [reward.id])
     expect(delivered).not.toContain('claim-button')
     expect(delivered).toContain('נמסר בעבר')
+  })
+
+  it('unlocks the two Robux rewards separately at their configured levels', () => {
+    const robux = semester.rewards.filter(reward => reward.type === 'Robux')
+    expect(semester.rewards.map(reward => reward.xp)).toEqual([40, 50, 60, 70, 80, 100])
+    expect(robux.map(reward => reward.xp)).toEqual([50, 70])
+    const markup = renderToStaticMarkup(<RewardLadder ladder={rewardLadder(semester, 70)}
+      progress={{ ...progress, claimed: [robux[0].id] }} xp={70} editable saving={false} onClaim={vi.fn()} />)
+    const robuxRows = [...markup.matchAll(/<li\b[^>]*>.*?<\/li>/g)].filter(row => row[0].includes('+1,000\u2069 רובאקס'))
+    expect(robuxRows).toHaveLength(2)
+    expect(robuxRows[0][0]).toContain('נמסר')
+    expect(robuxRows[0][0]).not.toContain('claim-button')
+    expect(robuxRows[1][0]).toContain('claim-button')
   })
 })

@@ -53,29 +53,43 @@
       ],
       "rewards": [
         {
-          "id": "robux-small",
-          "title": "250 רובאקס",
-          "xp": 25,
-          "type": "Robux",
-          "icon": "gift"
+          "id": "vbucks-800",
+          "title": "800 וי־באקס",
+          "xp": 40,
+          "type": "V-Bucks",
+          "icon": "trophy"
         },
         {
-          "id": "game",
-          "title": "זמן משחק נוסף",
-          "description": "חצי שעה במשחק לבחירה",
+          "id": "robux-1000-level-50",
+          "title": "\u2066+1,000\u2069 רובאקס",
           "xp": 50,
-          "icon": "game"
-        },
-        {
-          "id": "robux-large",
-          "title": "500 רובאקס",
-          "xp": 75,
           "type": "Robux",
           "icon": "gift"
         },
         {
-          "id": "vbucks",
-          "title": "1,000 וי־באקס",
+          "id": "vbucks-2400",
+          "title": "2,400 וי־באקס",
+          "xp": 60,
+          "type": "V-Bucks",
+          "icon": "trophy"
+        },
+        {
+          "id": "robux-1000-level-70",
+          "title": "\u2066+1,000\u2069 רובאקס",
+          "xp": 70,
+          "type": "Robux",
+          "icon": "gift"
+        },
+        {
+          "id": "vbucks-4500",
+          "title": "4,500 וי־באקס",
+          "xp": 80,
+          "type": "V-Bucks",
+          "icon": "trophy"
+        },
+        {
+          "id": "vbucks-12500",
+          "title": "12,500 וי־באקס",
           "xp": 100,
           "type": "V-Bucks",
           "icon": "trophy"

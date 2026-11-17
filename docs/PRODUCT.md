@@ -34,6 +34,19 @@ When a saved change reaches a level, the current bar fills and a light sweeps ac
 
 The **מסלול ההישגים** panel lists the achievements that unlock when XP meets the configured thresholds. Noam can mark an unlocked achievement as claimed from the dashboard. This does not spend XP. A claim stays recorded after a correction takes XP below its threshold, and the dashboard explains that the current XP is below the threshold.
 
+The active semester (`2026-a`) has six reward levels:
+
+| Semester XP | Reward |
+| ---: | --- |
+| 40 | 800 V-Bucks |
+| 50 | +1,000 Robux |
+| 60 | 2,400 V-Bucks |
+| 70 | +1,000 Robux |
+| 80 | 4,500 V-Bucks |
+| 100 | 12,500 V-Bucks |
+
+The two Robux levels award separate claims. Claims from the previous ladder stay stored under their original reward IDs.
+
 ### Persistence and access
 
 Firestore is the source of truth for study achievement, grades and claims. The app loads progress on open, on refresh and when switching semesters. Displayed XP and reward availability respond immediately to edits. The app shows when a change is saving and reports success after Firestore confirms it. If a save fails, it restores the last confirmed display and offers a retry.
