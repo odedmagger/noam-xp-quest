@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Sparkles, Zap } from 'lucide-react'
 import { animate, motion, useReducedMotion } from 'motion/react'
 import type { Reward } from '../quest'
@@ -6,6 +6,7 @@ import { advanceLevel, retargetLevel, startLevelProgress } from './level-progres
 
 const fillDuration = 0.36
 const celebrationDuration = 850
+const burstAngles = Array.from({ length: 12 }, (_, index) => index * 30)
 
 function XpCount({ xp, reducedMotion, fromZero }: { xp: number; reducedMotion: boolean; fromZero: boolean }) {
   const [display, setDisplay] = useState(fromZero ? 0 : xp)
@@ -54,7 +55,7 @@ export function XpHeader({ xp, confirmedXp, maxXp, levels }: {
     return () => window.clearTimeout(timer)
   }, [phase, level, reachedLevel, reducedMotion])
 
-  return <section className="hero" aria-labelledby="xp-title">
+  return <section className="hero" aria-labelledby="xp-title" data-level-up={celebrating || undefined}>
     <div className="hero-art" aria-hidden="true"><div className="art-grid" /></div>
     <div className="hero-content">
       <div className="hero-label">
@@ -89,6 +90,10 @@ export function XpHeader({ xp, confirmedXp, maxXp, levels }: {
         <span>רמה</span>
         <strong>{displayedLevel}</strong>
       </div>
+      {celebrating && !reducedMotion && <div className="level-burst" aria-hidden="true">
+        {burstAngles.map(angle => <span className="level-particle" key={angle}
+          style={{ '--spark-angle': angle + 'deg' } as CSSProperties} />)}
+      </div>}
       <span className="spark spark-top" aria-hidden="true">✦</span>
       <span className="spark spark-bottom" aria-hidden="true">✦</span>
     </div>
