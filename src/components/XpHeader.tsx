@@ -5,8 +5,14 @@ import type { Reward } from '../quest'
 import { advanceLevel, retargetLevel, startLevelProgress } from './level-progress'
 
 const fillDuration = 0.36
-const celebrationDuration = 850
-const burstAngles = Array.from({ length: 12 }, (_, index) => index * 30)
+const celebrationDuration = 1450
+const reducedCelebrationDuration = 850
+const burstAngles = Array.from({ length: 24 }, (_, index) => index * 15)
+const confettiPieces = Array.from({ length: 18 }, (_, index) => ({
+  position: 4 + index * 5.35 + (index % 3 - 1) * 1.6,
+  delay: 80 + (index * 53) % 280,
+  drift: (index % 5 - 2) * 12,
+}))
 
 function XpCount({ xp, reducedMotion, fromZero }: { xp: number; reducedMotion: boolean; fromZero: boolean }) {
   const [display, setDisplay] = useState(fromZero ? 0 : xp)
@@ -50,13 +56,24 @@ export function XpHeader({ xp, confirmedXp, maxXp, levels }: {
 
   useEffect(() => {
     if (phase === 'progress') return
-    const delay = phase === 'fill' ? reducedMotion ? 0 : fillDuration * 1000 + 50 : celebrationDuration
+    const delay = phase === 'fill'
+      ? (reducedMotion ? 0 : fillDuration * 1000 + 50)
+      : (reducedMotion ? reducedCelebrationDuration : celebrationDuration)
     const timer = window.setTimeout(() => setSequence(current => advanceLevel(current, reachedLevel)), delay)
     return () => window.clearTimeout(timer)
   }, [phase, level, reachedLevel, reducedMotion])
 
   return <section className="hero" aria-labelledby="xp-title" data-level-up={celebrating || undefined}>
     <div className="hero-art" aria-hidden="true"><div className="art-grid" /></div>
+    {celebrating && !reducedMotion && <div className="level-fanfare" aria-hidden="true">
+      {confettiPieces.map(({ position, delay, drift }) => (
+        <span className="level-confetti" key={position} style={{
+          left: position + '%',
+          animationDelay: delay + 'ms',
+          '--confetti-drift': drift + 'px',
+        } as CSSProperties} />
+      ))}
+    </div>}
     <div className="hero-content">
       <div className="hero-label">
         <h2 id="xp-title"><Zap size={16} fill="currentColor" /> התקדמות לרמה הבאה</h2>
